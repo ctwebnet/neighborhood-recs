@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { db } from "./firebase";
+import { collection, addDoc, getDocs } from "firebase/firestore";
+import { useState, useEffect } from "react";
 
 const serviceTypes = [
   "Plumber",
@@ -19,10 +21,31 @@ export default function App() {
     contactInfo: ""
   });
 
-  const handleSubmit = () => {
+  const fetchData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "recommendations"));
+      const recs = querySnapshot.docs.map(doc => doc.data());
+      setRecommendations(recs);
+    } catch (err) {
+      console.error("Failed to load recommendations:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async () => {
     if (form.name && form.serviceType && form.testimonial) {
-      setRecommendations([...recommendations, form]);
-      setForm({ name: "", serviceType: "", testimonial: "", contactInfo: "" });
+      try {
+        await addDoc(collection(db, "recommendations"), form);
+        alert("Recommendation submitted!");
+        setForm({ name: "", serviceType: "", testimonial: "", contactInfo: "" });
+        await fetchData(); // Refresh after submit
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        alert("Something went wrong!");
+      }
     }
   };
 
