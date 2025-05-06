@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { db, auth, provider } from "./firebase";
-import { collection, addDoc, onSnapshot } from "firebase/firestore";
-import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  addDoc,
+  onSnapshot
+} from "firebase/firestore";
+import {
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
 
 const serviceTypes = [
   "Plumber",
@@ -23,52 +31,43 @@ export default function App() {
     contactInfo: ""
   });
 
+  // Track login status
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
+    return () => unsubscribe();
+  }, []);
 
-    const unsubscribeData = onSnapshot(
+  // Load recs when user logs in
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = onSnapshot(
       collection(db, "recommendations"),
       (snapshot) => {
-        setRecommendations(snapshot.docs.map((doc) => doc.data()));
+        const recs = snapshot.docs.map((doc) => doc.data());
+        setRecommendations(recs);
       }
     );
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeData();
-    };
-  }, []);
-
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      console.error("Login error", err);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.error("Logout error", err);
-    }
-  };
+    return () => unsubscribe();
+  }, [user]);
 
   const handleSubmit = async () => {
-    if (form.name && form.serviceType && form.testimonial && user) {
+    if (form.name && form.serviceType && form.testimonial) {
       try {
         await addDoc(collection(db, "recommendations"), {
           ...form,
-          submittedBy: {
-            name: user.displayName,
-            email: user.email
-          }
+          createdBy: user.email
         });
         alert("Recommendation submitted!");
-        setForm({ name: "", serviceType: "", testimonial: "", contactInfo: "" });
+        setForm({
+          name: "",
+          serviceType: "",
+          testimonial: "",
+          contactInfo: ""
+        });
       } catch (e) {
         console.error("Error adding document: ", e);
         alert("Something went wrong!");
@@ -82,18 +81,15 @@ export default function App() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Neighborhood Recommendations</h1>
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Hi, {user.displayName}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-              >
-                Sign Out
-              </button>
-            </div>
+            <button
+              onClick={() => signOut(auth)}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Sign out
+            </button>
           ) : (
             <button
-              onClick={handleLogin}
+              onClick={() => signInWithPopup(auth, provider)}
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               Sign in with Google
@@ -101,9 +97,17 @@ export default function App() {
           )}
         </div>
 
-        {user ? (
+        {!user && (
+          <p className="text-gray-600 mb-4">
+            Sign in to submit a recommendation.
+          </p>
+        )}
+
+        {user && (
           <div className="bg-white p-4 rounded-lg shadow mb-8">
-            <h2 className="text-xl font-semibold mb-4">Submit a Recommendation</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Submit a Recommendation
+            </h2>
             <input
               className="w-full border p-2 mb-3"
               placeholder="Business or Person's Name"
@@ -113,24 +117,32 @@ export default function App() {
             <select
               className="w-full border p-2 mb-3"
               value={form.serviceType}
-              onChange={(e) => setForm({ ...form, serviceType: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, serviceType: e.target.value })
+              }
             >
               <option value="">Select Service Type</option>
               {serviceTypes.map((type) => (
-                <option key={type} value={type}>{type}</option>
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
             <textarea
               className="w-full border p-2 mb-3"
               placeholder="Why do you recommend them?"
               value={form.testimonial}
-              onChange={(e) => setForm({ ...form, testimonial: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, testimonial: e.target.value })
+              }
             />
             <input
               className="w-full border p-2 mb-3"
               placeholder="Optional: Contact Info (Phone, Email)"
               value={form.contactInfo}
-              onChange={(e) => setForm({ ...form, contactInfo: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, contactInfo: e.target.value })
+              }
             />
             <button
               onClick={handleSubmit}
@@ -139,24 +151,26 @@ export default function App() {
               Submit
             </button>
           </div>
-        ) : (
-          <p className="text-gray-600 mb-8">Sign in to submit a recommendation.</p>
         )}
 
         <div>
-          <h2 className="text-2xl font-semibold mb-4">Community Recommendations</h2>
+          <h2 className="text-2xl font-semibold mb-4">
+            Community Recommendations
+          </h2>
           {recommendations.length === 0 && <p>No recommendations yet!</p>}
           {recommendations.map((rec, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-lg shadow mb-4">
+            <div
+              key={idx}
+              className="bg-white p-4 rounded-lg shadow mb-4"
+            >
               <h3 className="text-lg font-bold">{rec.name}</h3>
-              <p className="text-sm text-gray-500 mb-2">{rec.serviceType}</p>
+              <p className="text-sm text-gray-500 mb-2">
+                {rec.serviceType}
+              </p>
               <p className="mb-2">{rec.testimonial}</p>
               {rec.contactInfo && (
-                <p className="text-sm text-gray-600">Contact: {rec.contactInfo}</p>
-              )}
-              {rec.submittedBy && (
-                <p className="text-xs text-gray-400">
-                  Submitted by: {rec.submittedBy.name} ({rec.submittedBy.email})
+                <p className="text-sm text-gray-600">
+                  Contact: {rec.contactInfo}
                 </p>
               )}
             </div>
