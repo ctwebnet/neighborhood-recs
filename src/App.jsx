@@ -17,10 +17,16 @@ import {
 const serviceTypes = [
   "Plumber",
   "Electrician",
-  "House Cleaner",
+  "Handyman",
   "Landscaping",
-  "Carpenter",
+  "House Cleaner",
+  "Painter",
+  "Pest Control",
+  "HVAC",
   "Childcare",
+  "Pet Care",
+  "Carpenter",
+  "Tech Help",
   "Other"
 ];
 
@@ -79,8 +85,11 @@ export default function App() {
       try {
         await addDoc(collection(db, "recommendations"), {
           ...form,
-          createdBy: user.email,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          submittedBy: {
+            name: user.displayName,
+            email: user.email
+          }
         });
         alert("Recommendation submitted!");
         setForm({
@@ -97,13 +106,11 @@ export default function App() {
   };
 
   const filteredRecs = recommendations.filter(
-  (rec) =>
-    rec.name?.toLowerCase().includes(search.toLowerCase()) ||
-    rec.testimonial?.toLowerCase().includes(search.toLowerCase()) ||
-    rec.serviceType?.toLowerCase().includes(search.toLowerCase())
-);
-
-  
+    (rec) =>
+      rec.name?.toLowerCase().includes(search.toLowerCase()) ||
+      rec.testimonial?.toLowerCase().includes(search.toLowerCase()) ||
+      rec.serviceType?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -182,7 +189,7 @@ export default function App() {
               <input
                 type="text"
                 className="w-full border p-2 mb-4"
-                placeholder="Search by name or testimonial..."
+                placeholder="Search by name, category, or testimonial..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -197,6 +204,11 @@ export default function App() {
                     {rec.contactInfo && (
                       <p className="text-sm text-gray-600 mb-1">
                         Contact: {rec.contactInfo}
+                      </p>
+                    )}
+                    {rec.submittedBy && (
+                      <p className="text-xs text-gray-400">
+                        Submitted by: {rec.submittedBy.name} ({rec.submittedBy.email})
                       </p>
                     )}
                     {rec.createdAt?.toDate && (
