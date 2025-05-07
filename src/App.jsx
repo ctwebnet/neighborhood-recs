@@ -97,10 +97,13 @@ export default function App() {
   };
 
   const filteredRecs = recommendations.filter(
-    (rec) =>
-      rec.name?.toLowerCase().includes(search.toLowerCase()) ||
-      rec.testimonial?.toLowerCase().includes(search.toLowerCase())
-  );
+  (rec) =>
+    rec.name?.toLowerCase().includes(search.toLowerCase()) ||
+    rec.testimonial?.toLowerCase().includes(search.toLowerCase()) ||
+    rec.serviceType?.toLowerCase().includes(search.toLowerCase())
+);
+
+  
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
