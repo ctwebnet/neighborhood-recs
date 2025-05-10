@@ -8,6 +8,7 @@ import GroupPage from "./pages/[groupId]";
 import AdminPage from "./pages/Admin";
 import LandingPage from "./pages/LandingPage";
 import "./index.css";
+import Feedback from "./pages/Feedback";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/" element={<LandingPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path=":groupId" element={<GroupPage />} />
+        <Route path="/feedback" element={<Feedback />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

@@ -1,37 +1,50 @@
 // src/pages/Admin.jsx
 
 import { useEffect, useState } from "react";
-import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase";
+import { Link } from "react-router-dom";
 import InviteCreator from "../components/InviteCreator";
 
 export default function AdminPage() {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Update this list with authorized admin emails
-  const allowedAdmins = [
-    "ben@plush-tek.com",
-    "ctwebnet@gmail.com"
-  ];
+  // Replace with your actual admin email(s)
+  const allowedEmails = ["ctwebnet@gmail.com", "ben@plush-tek.com"];
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u && allowedAdmins.includes(u.email)) {
-        setIsAdmin(true);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
-    return () => unsub();
+    return () => unsubscribe();
   }, []);
 
-  if (!user) return <p>Please sign in to access admin tools.</p>;
-  if (!isAdmin) return <p>Access denied. You are not an admin.</p>;
+  if (!user || !allowedEmails.includes(user.email)) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-6 text-center">
+        <h1 className="text-xl font-bold text-red-600">Access Denied</h1>
+        <p className="text-gray-700">You are not an admin.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-xl mx-auto mt-10 p-4">
-      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      <InviteCreator />
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Invite Someone to a Group</h2>
+          <InviteCreator />
+        </div>
+
+        <Link
+          to="/Feedback"
+          className="block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center"
+        >
+          View Feedback
+        </Link>
+      </div>
     </div>
   );
 }
