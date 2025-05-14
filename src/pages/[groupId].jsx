@@ -1,281 +1,311 @@
-// src/pages/[groupId].jsx
-
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { auth, db, provider } from "../firebase";
+import { useParams } from "react-router-dom";
 import {
   collection,
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
   addDoc,
+  onSnapshot,
   query,
   where,
   orderBy,
-  onSnapshot
+  serverTimestamp,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
   signInWithPopup,
-  signOut
+  signOut,
+  GoogleAuthProvider,
 } from "firebase/auth";
-
-const serviceTypes = [
-  "Plumber", "Electrician", "Handyman", "Landscaping", "House Cleaner",
-  "Painter", "Pest Control", "HVAC", "Childcare", "Pet Care",
-  "Carpenter", "Tech Help", "Other"
-];
+import { db, auth } from "../firebase";
 
 export default function GroupPage() {
   const { groupId } = useParams();
-  const [searchParams] = useSearchParams();
   const [user, setUser] = useState(null);
-  const [isMember, setIsMember] = useState(null);
-  const [error, setError] = useState(null);
-  const [form, setForm] = useState({ name: "", serviceType: "", testimonial: "", contactInfo: "", requestId: "" });
-  const [requestText, setRequestText] = useState("");
-  const [recommendations, setRecommendations] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [openReplyId, setOpenReplyId] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [newRequest, setNewRequest] = useState("");
+  const [newReplies, setNewReplies] = useState({});
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
-        setUser(null);
-        setIsMember(false);
-        return;
-      }
-      setUser(u);
-      const memberRef = doc(db, `groups/${groupId}/members`, u.uid);
-      const memberSnap = await getDoc(memberRef);
-      if (memberSnap.exists()) {
-        setIsMember(true);
-      } else {
-        const inviteToken = searchParams.get("invite");
-        if (!inviteToken) {
-          setIsMember(false);
-          setError("Access denied. You need an invite to join this group.");
-          return;
-        }
-        const inviteRef = doc(db, "invites", `${groupId}_${inviteToken}`);
-        const inviteSnap = await getDoc(inviteRef);
-        if (!inviteSnap.exists()) {
-          setIsMember(false);
-          setError("Invalid invite token.");
-          return;
-        }
-        await setDoc(memberRef, {
-          email: u.email,
-          displayName: u.displayName,
-          joinedAt: serverTimestamp()
-        });
-        setIsMember(true);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
     return () => unsubscribe();
-  }, [groupId]);
+  }, []);
 
   useEffect(() => {
-    if (!isMember) return;
-    const recQuery = query(collection(db, "recommendations"), where("groupId", "==", groupId), orderBy("createdAt", "desc"));
-    const unsubscribeRecs = onSnapshot(recQuery, (snapshot) => {
-      setRecommendations(snapshot.docs.map((doc) => doc.data()));
-    });
+    if (!user) return;
 
-    const reqQuery = query(collection(db, "requests"), where("groupId", "==", groupId), orderBy("createdAt", "desc"));
-    const unsubscribeReqs = onSnapshot(reqQuery, (snapshot) => {
+    const reqQuery = query(
+      collection(db, "requests"),
+      where("groupId", "==", groupId),
+      orderBy("createdAt", "desc")
+    );
+    const recQuery = query(
+      collection(db, "recommendations"),
+      where("groupId", "==", groupId),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubReq = onSnapshot(reqQuery, (snapshot) => {
       setRequests(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubRec = onSnapshot(recQuery, (snapshot) => {
+      setRecommendations(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
 
     return () => {
-      unsubscribeRecs();
-      unsubscribeReqs();
+      unsubReq();
+      unsubRec();
     };
-  }, [groupId, isMember]);
+  }, [user, groupId]);
+
+  const serviceTypeOptions = Array.from(
+    new Set(recommendations.map((r) => r.serviceType).filter(Boolean))
+  ).sort();
 
   const handleRequestSubmit = async () => {
-    if (!requestText || !user) return;
-    try {
-      await addDoc(collection(db, "requests"), {
-        requestText,
-        groupId,
-        createdAt: serverTimestamp(),
-        submittedBy: {
-          name: user.displayName,
-          email: user.email
-        }
-      });
-      setRequestText("");
-    } catch (e) {
-      console.error("Error submitting request:", e);
-      alert("Something went wrong.");
-    }
+    if (!newRequest.trim()) return;
+    await addDoc(collection(db, "requests"), {
+      text: newRequest,
+      groupId,
+      createdAt: serverTimestamp(),
+      submittedBy: {
+        name: user.displayName,
+        email: user.email,
+      },
+    });
+    setNewRequest("");
   };
 
-  const handleSubmit = async () => {
-    if (form.name && form.serviceType && form.testimonial && user) {
-      let finalRequestId = form.requestId;
-      if (!finalRequestId && requests.length > 0) {
-        const lowerTestimonial = form.testimonial.toLowerCase();
-        const lowerName = form.name.toLowerCase();
-        const lowerService = form.serviceType.toLowerCase();
-        const matched = requests.find((req) => {
-          const txt = req.requestText.toLowerCase();
-          return (
-            lowerTestimonial.includes(txt) ||
-            lowerName.includes(txt) ||
-            lowerService.includes(txt) ||
-            txt.includes(lowerService)
-          );
-        });
-        if (matched) finalRequestId = matched.id;
-      }
+  const handleRecommendationSubmit = async (requestId) => {
+    const reply = newReplies[requestId];
+    if (!reply?.testimonial || !reply?.name || !reply?.serviceType || !reply?.contactInfo) return;
 
-      try {
-        await addDoc(collection(db, "recommendations"), {
-          ...form,
-          requestId: finalRequestId,
-          groupId,
-          createdAt: serverTimestamp(),
-          submittedBy: {
-            name: user.displayName,
-            email: user.email
-          }
-        });
-        alert("Recommendation submitted!");
-        setForm({ name: "", serviceType: "", testimonial: "", contactInfo: "", requestId: "" });
-      } catch (e) {
-        console.error("Error adding recommendation:", e);
-        alert("Something went wrong.");
-      }
-    }
+    await addDoc(collection(db, "recommendations"), {
+      ...reply,
+      groupId,
+      linkedRequestId: requestId,
+      createdAt: serverTimestamp(),
+      submittedBy: {
+        name: user.displayName,
+        email: user.email,
+      },
+    });
+
+    setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
   };
 
-  const groupedRecs = requests.map((request) => {
-    const requestText = request.requestText.toLowerCase();
-    return {
-      request,
-      recs: recommendations.filter((rec) => {
-        const serviceType = rec.serviceType?.toLowerCase() || "";
-        const testimonial = rec.testimonial?.toLowerCase() || "";
-        const name = rec.name?.toLowerCase() || "";
-        return (
-          rec.requestId === request.id ||
-          testimonial.includes(requestText) ||
-          name.includes(requestText) ||
-          requestText.includes(serviceType) ||
-          serviceType.includes(requestText)
-        );
-      })
-    };
-  });
+  const getMatchingRecs = (req) => {
+    const text = req.text?.toLowerCase?.() || "";
+    return recommendations.filter((rec) => {
+      const alreadyLinked = rec.linkedRequestId === req.id;
+      if (alreadyLinked) return false;
+      const service = rec.serviceType?.toLowerCase?.() || "";
+      const testimonial = rec.testimonial?.toLowerCase?.() || "";
+      return service.includes(text) || testimonial.includes(text);
+    });
+  };
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <h2 className="text-xl font-semibold mb-4">Ask for a Recommendation</h2>
-        <input
-          className="w-full border p-2 mb-3"
-          placeholder="What are you looking for?"
-          value={requestText}
-          onChange={(e) => setRequestText(e.target.value)}
-        />
-        <button
-          onClick={handleRequestSubmit}
-          className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700"
-        >
-          Submit Request
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Welcome to {groupId}</h1>
+          {user ? (
+            <button
+              onClick={() => signOut(auth)}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Sign out
+            </button>
+          ) : (
+            <button
+              onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Sign in with Google
+            </button>
+          )}
+        </div>
 
-      <div className="space-y-6">
-        {groupedRecs.map(({ request, recs }) => (
-          <div key={request.id} className="bg-white p-4 rounded shadow">
-            <div className="mb-2">
-              <p className="font-semibold">🔍 {request.requestText}</p>
-              <p className="text-xs text-gray-500">
-                {request.submittedBy?.name || request.submittedBy?.email} – {request.createdAt?.toDate && request.createdAt.toDate().toLocaleString()}
-              </p>
+        {user ? (
+          <>
+            <div className="bg-white p-4 rounded shadow mb-6">
+              <h2 className="text-xl font-semibold mb-2">Ask for a Recommendation</h2>
+              <input
+                className="w-full border p-2 mb-2"
+                placeholder="What are you looking for?"
+                value={newRequest}
+                onChange={(e) => setNewRequest(e.target.value)}
+              />
               <button
-                className="mt-2 text-sm text-blue-600 hover:underline"
-                onClick={() => setOpenReplyId(openReplyId === request.id ? null : request.id)}
+                onClick={handleRequestSubmit}
+                className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700"
               >
-                {openReplyId === request.id ? "Cancel" : "Reply with a Recommendation"}
+                Submit Request
               </button>
             </div>
 
-            {openReplyId === request.id && (
-              <div className="bg-blue-50 p-3 rounded mb-3">
-                <input
-                  className="w-full border p-2 mb-2"
-                  placeholder="Business or Person's Name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value, requestId: request.id })}
-                />
-                <select
-                  className="w-full border p-2 mb-2"
-                  value={form.serviceType}
-                  onChange={(e) => setForm({ ...form, serviceType: e.target.value })}
-                >
-                  <option value="">Select Service Type</option>
-                  {serviceTypes.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-                <textarea
-                  className="w-full border p-2 mb-2"
-                  placeholder="Why do you recommend them?"
-                  value={form.testimonial}
-                  onChange={(e) => setForm({ ...form, testimonial: e.target.value })}
-                />
-                <input
-                  className="w-full border p-2 mb-2"
-                  placeholder="Optional: Contact Info (Phone, Email)"
-                  value={form.contactInfo}
-                  onChange={(e) => setForm({ ...form, contactInfo: e.target.value })}
-                />
-                <button
-                  onClick={handleSubmit}
-                  className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
-                >
-                  Submit Recommendation
-                </button>
-              </div>
-            )}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-2">Requests</h2>
+              {requests.length === 0 ? (
+                <p className="text-gray-500 italic">No requests yet.</p>
+              ) : (
+                requests.map((req) => {
+                  const directRecs = recommendations.filter(
+                    (rec) => rec.linkedRequestId === req.id
+                  );
+                  const matchedRecs = getMatchingRecs(req);
 
-            {recs.length > 0 && (
-              <div className="border-t mt-2 pt-2 space-y-3">
-                {recs.map((rec, idx) => (
-                  <div key={idx} className="bg-gray-50 p-3 rounded">
-                    <h3 className="font-bold">{rec.name}</h3>
-                    <p className="text-sm text-gray-600 mb-1">{rec.serviceType}</p>
-                    <p className="mb-1">{rec.testimonial}</p>
-                    {rec.contactInfo && (
-                      <p className="text-sm text-gray-600 mb-1">
-                        Contact: {rec.contactInfo}
+                  return (
+                    <div key={req.id} className="bg-white p-4 rounded shadow mb-6">
+                      <p className="font-medium">{req.text}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Submitted by {req.submittedBy?.name || "unknown"}
                       </p>
-                    )}
-                    <p className="text-xs text-gray-400">
-                      Submitted by: {rec.submittedBy?.name} ({rec.submittedBy?.email})
-                    </p>
-                    {rec.createdAt?.toDate && (
-                      <p className="text-xs text-gray-400">
-                        {rec.createdAt.toDate().toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+
+                      {directRecs.length > 0 && (
+                        <>
+                          <h4 className="mt-4 font-semibold">Replies</h4>
+                          {directRecs.map((rec) => (
+                            <div
+                              key={rec.id}
+                              className="border border-gray-200 rounded p-2 bg-gray-50 mt-2"
+                            >
+                              <p className="font-semibold">{rec.name}</p>
+                              <p className="text-sm text-gray-500">{rec.serviceType}</p>
+                              <p>{rec.testimonial}</p>
+                              <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                – {rec.submittedBy?.name}
+                              </p>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {matchedRecs.length > 0 && (
+                        <>
+                          <h4 className="mt-4 font-semibold text-gray-700">
+                            Other recommendations that might help
+                          </h4>
+                          {matchedRecs.map((rec) => (
+                            <div
+                              key={rec.id}
+                              className="border border-dashed border-gray-300 rounded p-2 bg-gray-50 mt-2"
+                            >
+                              <p className="font-semibold">{rec.name}</p>
+                              <p className="text-sm text-gray-500">{rec.serviceType}</p>
+                              <p>{rec.testimonial}</p>
+                              <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                – {rec.submittedBy?.name}
+                              </p>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      <div className="mt-4">
+                        <h4 className="font-medium mb-1">Add a Recommendation</h4>
+                        <input
+                          className="w-full border p-2 mb-2"
+                          placeholder="Name"
+                          value={newReplies[req.id]?.name || ""}
+                          onChange={(e) =>
+                            setNewReplies((prev) => ({
+                              ...prev,
+                              [req.id]: {
+                                ...prev[req.id],
+                                name: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                        <select
+                          className="w-full border p-2 mb-2"
+                          value={newReplies[req.id]?.serviceType || ""}
+                          onChange={(e) =>
+                            setNewReplies((prev) => ({
+                              ...prev,
+                              [req.id]: {
+                                ...prev[req.id],
+                                serviceType: e.target.value,
+                              },
+                            }))
+                          }
+                        >
+                          <option value="">Select a service type</option>
+                          {serviceTypeOptions.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                          <option value="__custom">Other (enter manually)</option>
+                        </select>
+                        {newReplies[req.id]?.serviceType === "__custom" && (
+                          <input
+                            className="w-full border p-2 mb-2"
+                            placeholder="Custom service type"
+                            value={newReplies[req.id]?.customServiceType || ""}
+                            onChange={(e) =>
+                              setNewReplies((prev) => ({
+                                ...prev,
+                                [req.id]: {
+                                  ...prev[req.id],
+                                  customServiceType: e.target.value,
+                                  serviceType: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        )}
+                        <textarea
+                          className="w-full border p-2 mb-2"
+                          placeholder="Why do you recommend them?"
+                          value={newReplies[req.id]?.testimonial || ""}
+                          onChange={(e) =>
+                            setNewReplies((prev) => ({
+                              ...prev,
+                              [req.id]: {
+                                ...prev[req.id],
+                                testimonial: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                        <input
+                          className="w-full border p-2 mb-2"
+                          placeholder="Contact Info"
+                          value={newReplies[req.id]?.contactInfo || ""}
+                          onChange={(e) =>
+                            setNewReplies((prev) => ({
+                              ...prev,
+                              [req.id]: {
+                                ...prev[req.id],
+                                contactInfo: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                        <button
+                          onClick={() => handleRecommendationSubmit(req.id)}
+                          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                        >
+                          Submit Recommendation
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="text-gray-600 italic">
+            Please sign in to ask for or view recommendations.
+          </p>
+        )}
       </div>
     </div>
   );
 }
-
-
-
-
 
