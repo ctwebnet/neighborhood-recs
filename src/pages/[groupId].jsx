@@ -17,6 +17,8 @@ import {
 } from "firebase/auth";
 import { db, auth } from "../firebase";
 
+import StandaloneRecForm from "../components/StandaloneRecForm";
+
 export default function GroupPage() {
   const { groupId } = useParams();
   const [user, setUser] = useState(null);
@@ -153,6 +155,11 @@ const handleRecommendationSubmit = async (requestId) => {
 
         {user ? (
           <>
+            <div className="bg-white p-4 rounded shadow mb-6">
+              <h2 className="text-xl font-semibold mb-2">Submit a General Recommendation</h2>
+              <StandaloneRecForm groupId={groupId} user={user} serviceTypeOptions={serviceTypeOptions} />
+            </div>
+
             <div className="bg-white p-4 rounded shadow mb-6">
               <h2 className="text-xl font-semibold mb-2">Ask for a Recommendation</h2>
               <input
@@ -331,4 +338,6 @@ const handleRecommendationSubmit = async (requestId) => {
     </div>
   );
 }
+
+
 
