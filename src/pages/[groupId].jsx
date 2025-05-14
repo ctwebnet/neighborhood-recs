@@ -77,34 +77,57 @@ export default function GroupPage() {
     setNewRequest("");
   };
 
-  const handleRecommendationSubmit = async (requestId) => {
-    const reply = newReplies[requestId];
-    if (!reply?.testimonial || !reply?.name || !reply?.serviceType || !reply?.contactInfo) return;
+const handleRecommendationSubmit = async (requestId) => {
+  const reply = newReplies[requestId];
+  const finalServiceType =
+    reply?.serviceType === "__custom"
+      ? reply?.customServiceType?.trim()
+      : reply?.serviceType?.trim();
 
-    await addDoc(collection(db, "recommendations"), {
-      ...reply,
-      groupId,
-      linkedRequestId: requestId,
-      createdAt: serverTimestamp(),
-      submittedBy: {
-        name: user.displayName,
-        email: user.email,
-      },
-    });
+  if (
+    !reply?.testimonial?.trim() ||
+    !reply?.name?.trim() ||
+    !finalServiceType ||
+    !reply?.contactInfo?.trim()
+  ) {
+    alert("Please fill out all fields, including a service type.");
+    return;
+  }
 
-    setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
-  };
+  await addDoc(collection(db, "recommendations"), {
+    ...reply,
+    serviceType: finalServiceType,
+    groupId,
+    linkedRequestId: requestId,
+    createdAt: serverTimestamp(),
+    submittedBy: {
+      name: user.displayName,
+      email: user.email,
+    },
+  });
+
+  setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
+};
+
 
   const getMatchingRecs = (req) => {
-    const text = req.text?.toLowerCase?.() || "";
-    return recommendations.filter((rec) => {
-      const alreadyLinked = rec.linkedRequestId === req.id;
-      if (alreadyLinked) return false;
-      const service = rec.serviceType?.toLowerCase?.() || "";
-      const testimonial = rec.testimonial?.toLowerCase?.() || "";
-      return service.includes(text) || testimonial.includes(text);
+  const keywords = req.text?.toLowerCase()?.trim().split(/\s+/) || [];
+
+  return recommendations.filter((rec) => {
+    if (rec.linkedRequestId === req.id) return false;
+
+    const service = rec.serviceType?.toLowerCase()?.trim() || "";
+    const testimonial = rec.testimonial?.toLowerCase()?.trim() || "";
+
+    return keywords.some((word) => {
+      const wordBoundaryRegex = new RegExp(`\\b${word}\\b`, 'i');
+      return wordBoundaryRegex.test(service) || wordBoundaryRegex.test(testimonial);
     });
-  };
+  });
+};
+
+
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
