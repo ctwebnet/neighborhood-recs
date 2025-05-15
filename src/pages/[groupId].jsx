@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import {
   collection,
@@ -76,6 +77,7 @@ export default function GroupPage() {
         email: user.email,
       },
     });
+    toast.success("Thanks! Your request has been posted.");
     setNewRequest("");
   };
 
@@ -108,6 +110,7 @@ const handleRecommendationSubmit = async (requestId) => {
     },
   });
 
+  toast.success("Thanks! Your recommendation was submitted.");
   setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
 };
 
@@ -338,6 +341,7 @@ const handleRecommendationSubmit = async (requestId) => {
     </div>
   );
 }
+
 
 
 

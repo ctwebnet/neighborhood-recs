@@ -1,3 +1,4 @@
+import { toast } from "react-hot-toast";
 import { useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
@@ -41,6 +42,7 @@ export default function StandaloneRecForm({ groupId, user, serviceTypeOptions })
         email: user.email,
       },
     });
+    toast.success("Thanks! Your recommendation was submitted.");
 
     setForm({ name: "", serviceType: "", customServiceType: "", testimonial: "", contactInfo: "" });
   };
