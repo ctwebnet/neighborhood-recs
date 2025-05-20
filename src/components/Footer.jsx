@@ -1,0 +1,55 @@
+// src/components/Footer.jsx
+
+import { useState } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { toast } from "react-hot-toast";
+import { db } from "../firebase";
+
+export default function Footer({ user }) {
+  const [feedback, setFeedback] = useState("");
+
+  const handleSubmit = async () => {
+    if (!feedback.trim()) return;
+
+    try {
+      await addDoc(collection(db, "feedback"), {
+        message: feedback,
+        email: user.email,
+        createdAt: serverTimestamp(),
+      });
+      toast.success("Feedback submitted!");
+      setFeedback("");
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      toast.error("Failed to submit feedback.");
+    }
+  };
+
+  return (
+    <footer className="bg-white mt-8 border-t py-6 px-4 text-sm text-gray-600">
+      <div className="max-w-3xl mx-auto text-center">
+        <p className="mb-2">
+          Made with ❤️ by <a href="/" className="text-blue-500 hover:underline">Neighboroonie</a>
+        </p>
+
+        {user && (
+          <div className="mt-4">
+            <p className="mb-1 font-semibold">Have feedback?</p>
+            <textarea
+              className="w-full border p-2 rounded mb-2 text-sm"
+              placeholder="Let us know what you think..."
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+            />
+            <button
+              onClick={handleSubmit}
+              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+            >
+              Submit Feedback
+            </button>
+          </div>
+        )}
+      </div>
+    </footer>
+  );
+}

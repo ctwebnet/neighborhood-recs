@@ -1,3 +1,5 @@
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
@@ -133,8 +135,9 @@ const handleRecommendationSubmit = async (requestId) => {
 
 
 
-
   return (
+    <>
+    <Header />
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-3xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -339,6 +342,8 @@ const handleRecommendationSubmit = async (requestId) => {
         )}
       </div>
     </div>
+    <Footer user={user} />
+  </>
   );
 }
 
