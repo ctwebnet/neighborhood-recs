@@ -30,6 +30,7 @@ const serviceTypes = [
   "Other"
 ];
 
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [recommendations, setRecommendations] = useState([]);

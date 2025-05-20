@@ -40,19 +40,23 @@ export default function LandingPage() {
   };
 
   const handleSubmitFeedback = async () => {
-    if (!feedback) return;
-    try {
-      await addDoc(collection(db, "feedback"), {
-        text: feedback,
-        submittedAt: serverTimestamp(),
-        user: user ? { name: user.displayName, email: user.email } : null,
-      });
-      setFeedback("");
-      alert("Thanks for your feedback!");
-    } catch (e) {
-      console.error("Feedback submission failed", e);
-    }
-  };
+  if (!feedback) return;
+  try {
+    await addDoc(collection(db, "feedback"), {
+      message: feedback, // top-level message for email trigger
+      email: user?.email || null, // top-level email for email trigger
+      submittedAt: serverTimestamp(),
+      user: user
+        ? { name: user.displayName, email: user.email }
+        : null,
+    });
+    setFeedback("");
+    alert("Thanks for your feedback!");
+  } catch (e) {
+    console.error("Feedback submission failed", e);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-center">

@@ -10,7 +10,9 @@ export default function FeedbackViewer() {
   useEffect(() => {
     const q = query(collection(db, "feedback"), orderBy("submittedAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const entries = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const entries = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((entry) => entry.message && entry.email); // filter for valid format
       setFeedbacks(entries);
     });
     return () => unsubscribe();
@@ -23,12 +25,8 @@ export default function FeedbackViewer() {
         {feedbacks.length === 0 && <p>No feedback submitted yet.</p>}
         {feedbacks.map((entry) => (
           <div key={entry.id} className="bg-white p-4 rounded shadow">
-            <p className="text-gray-800 mb-2">{entry.text}</p>
-            {entry.user && (
-              <p className="text-sm text-gray-500">
-                Submitted by: {entry.user.name || entry.user.email}
-              </p>
-            )}
+            <p className="text-gray-800 mb-2">{entry.message}</p>
+            <p className="text-sm text-gray-500">Submitted by: {entry.email}</p>
             {entry.submittedAt?.toDate && (
               <p className="text-xs text-gray-400">
                 {entry.submittedAt.toDate().toLocaleString()}
