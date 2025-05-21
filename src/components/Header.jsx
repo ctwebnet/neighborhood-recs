@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 
 export default function Header() {
   return (
-    <header className="bg-white shadow p-4 mb-6">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <Link to="/" className="text-2xl font-bold text-blue-600 tracking-tight">
-          Neighbor<span className="text-yellow-500">oonie</span>
+    <header className="bg-white shadow mb-6">
+      <div className="max-w-4xl mx-auto px-4 py-4">
+        <Link to="/" className="text-3xl font-bold">
+          <span className="text-purple-600">neighbor</span>
+          <span className="text-lime-600">oonie</span>
         </Link>
       </div>
     </header>
