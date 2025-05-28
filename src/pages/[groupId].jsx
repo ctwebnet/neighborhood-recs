@@ -179,10 +179,10 @@ export default function GroupPage() {
               </div>
 
               <div className="bg-white p-4 rounded shadow mb-6">
-                <h2 className="text-xl font-semibold mb-2">Ask for a Recommendation</h2>
+                <h2 className="text-xl font-semibold mb-2">Ask Neighboroonie for a Recommendation</h2>
                 <input
                   className="w-full border p-2 mb-2"
-                  placeholder="What are you looking for?"
+                  placeholder="e.g., Looking for a reliable plumber for a leaky faucet"
                   value={newRequest}
                   onChange={(e) => setNewRequest(e.target.value)}
                 />
@@ -284,7 +284,7 @@ export default function GroupPage() {
                           <h4 className="font-medium mb-1">Add a Recommendation</h4>
                           <input
                             className="w-full border p-2 mb-2"
-                            placeholder="Name"
+                            placeholder="Who are you recommending?"
                             value={newReplies[req.id]?.name || ""}
                             onChange={(e) =>
                               setNewReplies((prev) => ({
@@ -320,7 +320,7 @@ export default function GroupPage() {
                           {newReplies[req.id]?.serviceType === "__custom" && (
                             <input
                               className="w-full border p-2 mb-2"
-                              placeholder="Custom service type"
+                              placeholder="e.g., Furniture repair, piano tuner"
                               value={newReplies[req.id]?.customServiceType || ""}
                               onChange={(e) =>
                                 setNewReplies((prev) => ({
@@ -336,7 +336,7 @@ export default function GroupPage() {
                           )}
                           <textarea
                             className="w-full border p-2 mb-2"
-                            placeholder="Why do you recommend them?"
+                            placeholder="What did they do for you, and how was the experience?"
                             value={newReplies[req.id]?.testimonial || ""}
                             onChange={(e) =>
                               setNewReplies((prev) => ({
@@ -350,7 +350,7 @@ export default function GroupPage() {
                           />
                           <input
                             className="w-full border p-2 mb-2"
-                            placeholder="Contact Info"
+                            placeholder="Phone, email, website, or other way to reach them"
                             value={newReplies[req.id]?.contactInfo || ""}
                             onChange={(e) =>
                               setNewReplies((prev) => ({
