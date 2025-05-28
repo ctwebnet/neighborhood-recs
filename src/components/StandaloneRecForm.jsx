@@ -1,9 +1,16 @@
 import { toast } from "react-hot-toast";
-import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  getDocs,
+  doc,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
-export default function StandaloneRecForm({ groupId, user, serviceTypeOptions }) {
+export default function StandaloneRecForm({ groupId, user }) {
   const [form, setForm] = useState({
     name: "",
     serviceType: "",
@@ -12,13 +19,26 @@ export default function StandaloneRecForm({ groupId, user, serviceTypeOptions })
     contactInfo: "",
   });
 
+  const [serviceTypes, setServiceTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchServiceTypes = async () => {
+      const snapshot = await getDocs(collection(db, "serviceTypes"));
+      const types = snapshot.docs.map((doc) => doc.id);
+      setServiceTypes(types);
+    };
+    fetchServiceTypes();
+  }, []);
+
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
     const finalServiceType =
-      form.serviceType === "__custom" ? form.customServiceType.trim() : form.serviceType.trim();
+      form.serviceType === "__custom"
+        ? form.customServiceType.trim()
+        : form.serviceType.trim();
 
     if (
       !form.name.trim() ||
@@ -28,6 +48,11 @@ export default function StandaloneRecForm({ groupId, user, serviceTypeOptions })
     ) {
       alert("Please fill out all fields, including a service type.");
       return;
+    }
+
+    // Save custom service type to the global collection
+    if (form.serviceType === "__custom" && finalServiceType) {
+      await setDoc(doc(db, "serviceTypes", finalServiceType), {});
     }
 
     await addDoc(collection(db, "recommendations"), {
@@ -42,9 +67,16 @@ export default function StandaloneRecForm({ groupId, user, serviceTypeOptions })
         email: user.email,
       },
     });
+
     toast.success("Thanks! Your recommendation was submitted.");
 
-    setForm({ name: "", serviceType: "", customServiceType: "", testimonial: "", contactInfo: "" });
+    setForm({
+      name: "",
+      serviceType: "",
+      customServiceType: "",
+      testimonial: "",
+      contactInfo: "",
+    });
   };
 
   return (
@@ -61,8 +93,10 @@ export default function StandaloneRecForm({ groupId, user, serviceTypeOptions })
         onChange={(e) => handleChange("serviceType", e.target.value)}
       >
         <option value="">Select a service type</option>
-        {serviceTypeOptions.map((type) => (
-          <option key={type} value={type}>{type}</option>
+        {serviceTypes.map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
         ))}
         <option value="__custom">Other (enter manually)</option>
       </select>

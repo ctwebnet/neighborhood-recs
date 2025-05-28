@@ -1,3 +1,4 @@
+// Full file pasted fresh
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
@@ -11,6 +12,9 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  getDocs,
+  doc,
+  setDoc,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
@@ -28,12 +32,27 @@ export default function GroupPage() {
   const [recommendations, setRecommendations] = useState([]);
   const [newRequest, setNewRequest] = useState("");
   const [newRequestServiceType, setNewRequestServiceType] = useState("");
-  const [newRequestCustomServiceType, setNewRequestCustomServiceType] = useState("");
+  const [customRequestServiceType, setCustomRequestServiceType] = useState("");
   const [newReplies, setNewReplies] = useState({});
+  const [serviceTypes, setServiceTypes] = useState([]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return unsubscribe;
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const fetchServiceTypes = async () => {
+      const snapshot = await getDocs(collection(db, "serviceTypes"));
+      const types = snapshot.docs
+        .map((doc) => doc.id?.trim())
+        .filter((id) => typeof id === "string" && id.length > 0)
+        .sort();
+      setServiceTypes(types);
+    };
+    fetchServiceTypes();
   }, []);
 
   useEffect(() => {
@@ -50,12 +69,12 @@ export default function GroupPage() {
       orderBy("createdAt", "desc")
     );
 
-    const unsubReq = onSnapshot(reqQuery, (snapshot) =>
-      setRequests(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
-    );
-    const unsubRec = onSnapshot(recQuery, (snapshot) =>
-      setRecommendations(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
-    );
+    const unsubReq = onSnapshot(reqQuery, (snapshot) => {
+      setRequests(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubRec = onSnapshot(recQuery, (snapshot) => {
+      setRecommendations(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
 
     return () => {
       unsubReq();
@@ -63,23 +82,23 @@ export default function GroupPage() {
     };
   }, [user, groupId]);
 
-  const serviceTypeOptions = Array.from(
-    new Set(recommendations.map((r) => r.serviceType).filter(Boolean))
-  ).sort();
-
   const handleRequestSubmit = async () => {
     const finalServiceType =
       newRequestServiceType === "__custom"
-        ? newRequestCustomServiceType.trim()
+        ? customRequestServiceType.trim()
         : newRequestServiceType;
 
     if (!newRequest.trim() || !finalServiceType) {
-      alert("Please enter a request and select a service type.");
+      alert("Please provide both a request and a service type.");
       return;
     }
 
+    if (newRequestServiceType === "__custom" && finalServiceType) {
+      await setDoc(doc(db, "serviceTypes", finalServiceType), {});
+    }
+
     await addDoc(collection(db, "requests"), {
-      text: newRequest.trim(),
+      text: newRequest,
       serviceType: finalServiceType,
       groupId,
       createdAt: serverTimestamp(),
@@ -92,7 +111,7 @@ export default function GroupPage() {
     toast.success("Thanks! Your request has been posted.");
     setNewRequest("");
     setNewRequestServiceType("");
-    setNewRequestCustomServiceType("");
+    setCustomRequestServiceType("");
   };
 
   const handleRecommendationSubmit = async (requestId) => {
@@ -128,15 +147,6 @@ export default function GroupPage() {
     setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
   };
 
-  const getMatchingRecs = (req) => {
-    const reqType = req.serviceType?.toLowerCase()?.trim();
-    return recommendations.filter(
-      (rec) =>
-        rec.linkedRequestId !== req.id &&
-        rec.serviceType?.toLowerCase()?.trim() === reqType
-    );
-  };
-
   return (
     <>
       <Header />
@@ -165,7 +175,7 @@ export default function GroupPage() {
             <>
               <div className="bg-white p-4 rounded shadow mb-6">
                 <h2 className="text-xl font-semibold mb-2">Submit a General Recommendation</h2>
-                <StandaloneRecForm groupId={groupId} user={user} serviceTypeOptions={serviceTypeOptions} />
+                <StandaloneRecForm groupId={groupId} user={user} />
               </div>
 
               <div className="bg-white p-4 rounded shadow mb-6">
@@ -182,8 +192,10 @@ export default function GroupPage() {
                   onChange={(e) => setNewRequestServiceType(e.target.value)}
                 >
                   <option value="">Select a service type</option>
-                  {serviceTypeOptions.map((type) => (
-                    <option key={type} value={type}>{type}</option>
+                  {serviceTypes.map((type, index) => (
+                    <option key={`${type}-${index}`} value={type}>
+                      {type}
+                    </option>
                   ))}
                   <option value="__custom">Other (enter manually)</option>
                 </select>
@@ -191,8 +203,8 @@ export default function GroupPage() {
                   <input
                     className="w-full border p-2 mb-2"
                     placeholder="Custom service type"
-                    value={newRequestCustomServiceType}
-                    onChange={(e) => setNewRequestCustomServiceType(e.target.value)}
+                    value={customRequestServiceType}
+                    onChange={(e) => setCustomRequestServiceType(e.target.value)}
                   />
                 )}
                 <button
@@ -212,18 +224,22 @@ export default function GroupPage() {
                     const directRecs = recommendations.filter(
                       (rec) => rec.linkedRequestId === req.id
                     );
-                    const matchedRecs = getMatchingRecs(req);
+                    const matchedRecs = recommendations.filter(
+                      (rec) =>
+                        rec.linkedRequestId !== req.id &&
+                        rec.serviceType?.toLowerCase().trim() ===
+                          req.serviceType?.toLowerCase().trim()
+                    );
 
                     return (
                       <div key={req.id} className="bg-white p-4 rounded shadow mb-6">
                         <p className="font-medium">{req.text}</p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Service type: {req.serviceType}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Submitted by {req.submittedBy?.name || "unknown"}
+                          {req.serviceType && <>(
+                            {req.serviceType}){" "}</>}Submitted by {req.submittedBy?.name || "unknown"}
                         </p>
 
+                        {/* replies */}
                         {directRecs.length > 0 && (
                           <>
                             <h4 className="mt-4 font-semibold">Replies</h4>
@@ -236,14 +252,13 @@ export default function GroupPage() {
                                 <p className="text-sm text-gray-500">{rec.serviceType}</p>
                                 <p>{rec.testimonial}</p>
                                 <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  – {rec.submittedBy?.name}
-                                </p>
+                                <p className="text-xs text-gray-400 mt-1">– {rec.submittedBy?.name}</p>
                               </div>
                             ))}
                           </>
                         )}
 
+                        {/* match recommendations */}
                         {matchedRecs.length > 0 && (
                           <>
                             <h4 className="mt-4 font-semibold text-gray-700">
@@ -258,14 +273,13 @@ export default function GroupPage() {
                                 <p className="text-sm text-gray-500">{rec.serviceType}</p>
                                 <p>{rec.testimonial}</p>
                                 <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  – {rec.submittedBy?.name}
-                                </p>
+                                <p className="text-xs text-gray-400 mt-1">– {rec.submittedBy?.name}</p>
                               </div>
                             ))}
                           </>
                         )}
 
+                        {/* reply form */}
                         <div className="mt-4">
                           <h4 className="font-medium mb-1">Add a Recommendation</h4>
                           <input
@@ -296,8 +310,10 @@ export default function GroupPage() {
                             }
                           >
                             <option value="">Select a service type</option>
-                            {serviceTypeOptions.map((type) => (
-                              <option key={type} value={type}>{type}</option>
+                            {serviceTypes.map((type, index) => (
+                              <option key={`${type}-${index}`} value={type}>
+                                {type}
+                              </option>
                             ))}
                             <option value="__custom">Other (enter manually)</option>
                           </select>
@@ -370,6 +386,5 @@ export default function GroupPage() {
     </>
   );
 }
-
 
 
