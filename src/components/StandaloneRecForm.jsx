@@ -83,7 +83,7 @@ export default function StandaloneRecForm({ groupId, user }) {
     <div>
       <input
         className="w-full border p-2 mb-2"
-        placeholder="Name"
+        placeholder="Who are you recommending?"
         value={form.name}
         onChange={(e) => handleChange("name", e.target.value)}
       />
@@ -103,20 +103,20 @@ export default function StandaloneRecForm({ groupId, user }) {
       {form.serviceType === "__custom" && (
         <input
           className="w-full border p-2 mb-2"
-          placeholder="Custom service type"
+          placeholder="e.g., Furniture repair, piano tuner"
           value={form.customServiceType}
           onChange={(e) => handleChange("customServiceType", e.target.value)}
         />
       )}
       <textarea
         className="w-full border p-2 mb-2"
-        placeholder="Why do you recommend them?"
+        placeholder="What did they do for you, and how was the experience?"
         value={form.testimonial}
         onChange={(e) => handleChange("testimonial", e.target.value)}
       />
       <input
         className="w-full border p-2 mb-2"
-        placeholder="Contact Info"
+        placeholder="Phone, email, website, or other way to reach them"
         value={form.contactInfo}
         onChange={(e) => handleChange("contactInfo", e.target.value)}
       />
