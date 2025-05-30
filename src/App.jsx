@@ -30,7 +30,6 @@ const serviceTypes = [
   "Other"
 ];
 
-
 export default function App() {
   const [user, setUser] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
@@ -114,14 +113,14 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-white text-gray-900 font-sans p-6">
       <div className="max-w-3xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Neighborhood Recommendations</h1>
+          <h1 className="text-3xl font-semibold">Neighborhood Recommendations</h1>
           {user && (
             <button
               onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              className="border border-black text-black px-4 py-2 rounded hover:bg-black hover:text-white transition"
             >
               Sign out
             </button>
@@ -129,16 +128,16 @@ export default function App() {
         </div>
 
         {user && (
-          <div className="bg-white p-4 rounded-lg shadow mb-8">
-            <h2 className="text-xl font-semibold mb-4">Submit a Recommendation</h2>
+          <div className="bg-white border border-gray-200 rounded p-4 mb-8 shadow-sm">
+            <h2 className="text-2xl font-semibold mb-4">Submit a Recommendation</h2>
             <input
-              className="w-full border p-2 mb-3"
-              placeholder="Business or Person's Name"
+              className="w-full border-b border-gray-400 py-2 px-1 mb-3 focus:outline-none focus:border-black transition"
+              placeholder="Who are you recommending?"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
             <select
-              className="w-full border p-2 mb-3"
+              className="w-full border-b border-gray-400 py-2 px-1 mb-3 focus:outline-none focus:border-black transition"
               value={form.serviceType}
               onChange={(e) => setForm({ ...form, serviceType: e.target.value })}
             >
@@ -150,20 +149,20 @@ export default function App() {
               ))}
             </select>
             <textarea
-              className="w-full border p-2 mb-3"
-              placeholder="Why do you recommend them?"
+              className="w-full border-b border-gray-400 py-2 px-1 mb-3 focus:outline-none focus:border-black transition"
+              placeholder="What did they do for you, and how was the experience?"
               value={form.testimonial}
               onChange={(e) => setForm({ ...form, testimonial: e.target.value })}
             />
             <input
-              className="w-full border p-2 mb-3"
-              placeholder="Optional: Contact Info (Phone, Email)"
+              className="w-full border-b border-gray-400 py-2 px-1 mb-3 focus:outline-none focus:border-black transition"
+              placeholder="Phone, email, website, or other way to reach them"
               value={form.contactInfo}
               onChange={(e) => setForm({ ...form, contactInfo: e.target.value })}
             />
             <button
               onClick={handleSubmit}
-              className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+              className="border border-black text-black px-4 py-2 rounded hover:bg-black hover:text-white transition w-full"
             >
               Submit
             </button>
@@ -178,7 +177,7 @@ export default function App() {
               <p className="text-gray-600 mb-2">Sign in to submit or view recs.</p>
               <button
                 onClick={handleLogin}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                className="border border-black text-black px-4 py-2 rounded hover:bg-black hover:text-white transition"
               >
                 Sign in with Google
               </button>
@@ -189,7 +188,7 @@ export default function App() {
             <>
               <input
                 type="text"
-                className="w-full border p-2 mb-4"
+                className="w-full border-b border-gray-400 py-2 px-1 mb-4 focus:outline-none focus:border-black transition"
                 placeholder="Search by name, category, or testimonial..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -198,9 +197,9 @@ export default function App() {
                 <p>No recommendations yet!</p>
               ) : (
                 filteredRecs.map((rec, idx) => (
-                  <div key={idx} className="bg-white p-4 rounded-lg shadow mb-4">
-                    <h3 className="text-lg font-bold">{rec.name}</h3>
-                    <p className="text-sm text-gray-500 mb-1">{rec.serviceType}</p>
+                  <div key={idx} className="bg-white border border-gray-200 rounded p-4 mb-4 shadow-sm">
+                    <h3 className="text-lg font-semibold">{rec.name}</h3>
+                    <p className="text-sm text-gray-600 mb-1">{rec.serviceType}</p>
                     <p className="mb-2">{rec.testimonial}</p>
                     {rec.contactInfo && (
                       <p className="text-sm text-gray-600 mb-1">
@@ -227,3 +226,4 @@ export default function App() {
     </div>
   );
 }
+

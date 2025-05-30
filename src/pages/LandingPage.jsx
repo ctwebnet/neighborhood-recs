@@ -13,8 +13,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import toast from "react-hot-toast";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Layout from "../components/Layout";
 
 export default function LandingPage() {
   const [user, setUser] = useState(null);
@@ -58,28 +57,21 @@ export default function LandingPage() {
   };
 
   return (
-    <>
-      <Header />
-      <div className="min-h-screen bg-gray-100 p-6 text-center">
+    <Layout user={user}>
+      <div className="text-center">
         <h1 className="text-4xl font-bold text-purple-700 mb-4">neighboroonie</h1>
         <p className="mb-6 text-gray-700">
           A simple way to share and find trusted local recommendations.
         </p>
 
         {!user ? (
-          <button
-            onClick={handleLogin}
-            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
-          >
+          <button onClick={handleLogin}>
             Sign in with Google
           </button>
         ) : (
           <div className="mb-6">
             <p className="text-gray-700 mb-2">Signed in as {user.displayName}</p>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
+            <button onClick={handleLogout}>
               Sign out
             </button>
           </div>
@@ -93,8 +85,7 @@ export default function LandingPage() {
           </p>
         </div>
       </div>
-
-      <Footer user={user} />
-    </>
+    </Layout>
   );
 }
+

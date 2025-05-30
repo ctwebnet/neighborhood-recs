@@ -1,8 +1,8 @@
 // src/pages/Feedback.jsx
-
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import Layout from "../components/Layout";
 
 export default function FeedbackViewer() {
   const [feedbacks, setFeedbacks] = useState([]);
@@ -12,14 +12,14 @@ export default function FeedbackViewer() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const entries = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((entry) => entry.message && entry.email); // filter for valid format
+        .filter((entry) => entry.message && entry.email);
       setFeedbacks(entries);
     });
     return () => unsubscribe();
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <Layout>
       <h1 className="text-3xl font-bold mb-6">Feedback Inbox</h1>
       <div className="space-y-4">
         {feedbacks.length === 0 && <p>No feedback submitted yet.</p>}
@@ -35,6 +35,6 @@ export default function FeedbackViewer() {
           </div>
         ))}
       </div>
-    </div>
+    </Layout>
   );
 }

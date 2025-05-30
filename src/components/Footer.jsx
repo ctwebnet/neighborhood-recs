@@ -41,12 +41,10 @@ export default function Footer({ user }) {
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
             />
-            <button
-              onClick={handleSubmit}
-              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-            >
-              Submit Feedback
-            </button>
+            <button onClick={handleSubmit}>
+  Submit Feedback
+</button>
+
           </div>
         )}
       </div>
