@@ -9,6 +9,8 @@ import {
   orderBy,
   serverTimestamp,
   doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
@@ -29,18 +31,16 @@ const RequestPage = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [newReplies, setNewReplies] = useState({});
   const [serviceTypes, setServiceTypes] = useState([]);
-useEffect(() => {
-  const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-    setUser(currentUser);
-    setLoading(false);
+  const [hasGroupAccess, setHasGroupAccess] = useState(null);
 
-    if (currentUser) {
-      const idTokenResult = await currentUser.getIdTokenResult();
-      console.log("Custom claims:", idTokenResult.claims);
-    }
-  });
-  return () => unsubscribeAuth();
-}, []);
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
   const handleSignIn = () => {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).catch((error) => {
@@ -48,25 +48,62 @@ useEffect(() => {
     });
   };
 
+  // Group membership check and onboarding
   useEffect(() => {
-    if (!user) return;
+    const checkGroupAccess = async () => {
+      if (!user) return;
 
-    // Load the request
-    const requestRef = doc(db, "requests", requestId);
-    const unsubReq = onSnapshot(requestRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setRequest({ id: docSnap.id, ...docSnap.data() });
-      } else {
+      const requestRef = doc(db, "requests", requestId);
+      const requestSnap = await getDoc(requestRef);
+
+      if (!requestSnap.exists()) {
         setRequest(null);
+        return;
       }
-    });
 
-    // Load recommendations linked to this request
+      const requestData = requestSnap.data();
+      setRequest({ id: requestSnap.id, ...requestData });
+
+      const groupId = requestData.groupId;
+
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.groupIds?.includes(groupId)) {
+          setHasGroupAccess(true);
+        } else {
+          // Let user join group by viewing request page
+          await setDoc(userRef, {
+            ...userData,
+            groupIds: [...(userData.groupIds || []), groupId],
+          });
+          setHasGroupAccess(true);
+        }
+      } else {
+        await setDoc(userRef, {
+          email: user.email,
+          firstName: user.displayName?.split(" ")[0] || "",
+          lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
+          groupIds: [groupId],
+        });
+        setHasGroupAccess(true);
+      }
+    };
+
+    checkGroupAccess();
+  }, [user, requestId]);
+
+  useEffect(() => {
+    if (!user || !request || hasGroupAccess !== true) return;
+
     const recsQuery = query(
       collection(db, "recommendations"),
-      where("linkedRequestId", "==", requestId)
+      where("groupId", "==", request.groupId),
+      orderBy("createdAt", "desc")
     );
-    const unsubRec = onSnapshot(recsQuery, (snapshot) => {
+    const unsubRecs = onSnapshot(recsQuery, (snapshot) => {
       const recs = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -74,7 +111,6 @@ useEffect(() => {
       setRecommendations(recs);
     });
 
-    // Load service types from Firestore
     const unsubServiceTypes = onSnapshot(
       collection(db, "serviceTypes"),
       (snapshot) => {
@@ -86,11 +122,10 @@ useEffect(() => {
     );
 
     return () => {
-      unsubReq();
-      unsubRec();
+      unsubRecs();
       unsubServiceTypes();
     };
-  }, [requestId, user]);
+  }, [user, request, requestId, hasGroupAccess]);
 
   const handleReplySubmit = async (requestId) => {
     const reply = newReplies[requestId];
@@ -105,6 +140,7 @@ useEffect(() => {
     }
     await addDoc(collection(db, "recommendations"), {
       ...reply,
+      groupId: request.groupId,
       linkedRequestId: requestId,
       createdAt: serverTimestamp(),
       submittedBy: {
@@ -155,27 +191,56 @@ useEffect(() => {
     );
   }
 
+  if (!request) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-100 p-6 text-center">
+          <p className="text-lg text-gray-600">
+            This request does not exist or could not be loaded.
+          </p>
+        </div>
+        <Footer user={user} />
+        <Toaster position="top-center" reverseOrder={false} />
+      </>
+    );
+  }
+
+  if (hasGroupAccess === false) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-100 p-6 text-center">
+          <h1 className="text-3xl font-bold mb-4">
+            Sorry, you're not a member of this group.
+          </h1>
+          <p className="text-gray-600">
+            Please ask a neighbor for an invite code to join this group.
+          </p>
+        </div>
+        <Footer user={user} />
+        <Toaster position="top-center" reverseOrder={false} />
+      </>
+    );
+  }
+
   return (
     <>
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
-        {request ? (
-          <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-            <Request
-              request={request}
-              directRecs={recommendations}
-              matchedRecs={getMatchingRecs(request)}
-              newReplies={newReplies}
-              setNewReplies={setNewReplies}
-              handleReplySubmit={handleReplySubmit}
-              serviceTypes={serviceTypes}
-            />
-          </div>
-        ) : (
-          <p className="text-center text-lg text-gray-600">
-            This request does not exist or could not be loaded.
-          </p>
-        )}
+        <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
+          <Request
+            request={request}
+            directRecs={recommendations.filter(
+              (rec) => rec.linkedRequestId === request.id
+            )}
+            matchedRecs={getMatchingRecs(request)}
+            newReplies={newReplies}
+            setNewReplies={setNewReplies}
+            handleReplySubmit={handleReplySubmit}
+            serviceTypes={serviceTypes}
+          />
+        </div>
       </div>
       <Footer user={user} />
       <Toaster position="top-center" reverseOrder={false} />
