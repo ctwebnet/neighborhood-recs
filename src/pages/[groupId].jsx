@@ -2,7 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   collection,
   addDoc,
@@ -26,7 +26,6 @@ import StandaloneRecForm from "../components/StandaloneRecForm";
 
 export default function GroupPage() {
   const { groupId } = useParams();
-  const location = useLocation();
   const [user, setUser] = useState(null);
   const [groupExists, setGroupExists] = useState(null);
   const [hasGroupAccess, setHasGroupAccess] = useState(null);
@@ -37,33 +36,16 @@ export default function GroupPage() {
   const [newReplies, setNewReplies] = useState({});
   const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [inviteValid, setInviteValid] = useState(true);
-
-  const queryParams = new URLSearchParams(location.search);
-  const inviteCode = queryParams.get("invite");
-
-  useEffect(() => {
-    if (!inviteCode) return;
-    const validateInvite = async () => {
-      const inviteRef = doc(db, "invites", inviteCode);
-      const inviteSnap = await getDoc(inviteRef);
-      if (!inviteSnap.exists()) {
-        toast.error("Invalid invite code.");
-        setInviteValid(false);
-      } else {
-        setInviteValid(true);
-      }
-    };
-    validateInvite();
-  }, [inviteCode]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
         const userSnap = await getDoc(userRef);
+
         let firstName = "";
         let lastName = "";
         if (currentUser.displayName) {
@@ -71,6 +53,7 @@ export default function GroupPage() {
           firstName = nameParts[0] || "";
           lastName = nameParts.slice(1).join(" ") || "";
         }
+
         if (!userSnap.exists()) {
           await setDoc(userRef, {
             email: currentUser.email,
@@ -78,6 +61,7 @@ export default function GroupPage() {
             lastName,
             groupIds: [groupId],
           });
+          setHasGroupAccess(true);
         } else {
           const userData = userSnap.data();
           if (!userData.groupIds) {
@@ -85,11 +69,15 @@ export default function GroupPage() {
               ...userData,
               groupIds: [groupId],
             });
+            setHasGroupAccess(true);
           } else if (!userData.groupIds.includes(groupId)) {
             await setDoc(userRef, {
               ...userData,
               groupIds: [...userData.groupIds, groupId],
             });
+            setHasGroupAccess(true);
+          } else {
+            setHasGroupAccess(true);
           }
         }
       }
@@ -108,26 +96,6 @@ export default function GroupPage() {
     };
     checkGroup();
   }, [groupId]);
-
-  useEffect(() => {
-    const checkAccess = async () => {
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          if (userData.groupIds?.includes(groupId)) {
-            setHasGroupAccess(true);
-          } else {
-            setHasGroupAccess(false);
-          }
-        } else {
-          setHasGroupAccess(false);
-        }
-      }
-    };
-    checkAccess();
-  }, [user, groupId]);
 
   useEffect(() => {
     if (!user || !groupExists || !hasGroupAccess) return;
@@ -254,18 +222,12 @@ export default function GroupPage() {
             Neighboroonie is a private space where neighbors share and request
             trusted recommendations. Sign in to join the conversation!
           </p>
-          {inviteValid ? (
-            <button
-              onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
-              className="btn-primary"
-            >
-              Sign in with Google
-            </button>
-          ) : (
-            <p className="text-red-600">
-              This invite code is invalid. Please ask a neighbor for a new invite code.
-            </p>
-          )}
+          <button
+            onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
+            className="btn-primary"
+          >
+            Sign in with Google
+          </button>
         </div>
         <Footer user={user} />
       </>
@@ -319,8 +281,8 @@ export default function GroupPage() {
               Submit a General Recommendation
             </h2>
             <p className="text-gray-600 text-sm mb-2">
-  👋 New here? Kick things off by recommending your absolute favorite contractor — it’s the best way to help your neighbors!
-</p>
+              👋 New here? Kick things off by recommending your absolute favorite contractor — it’s the best way to help your neighbors!
+            </p>
             <StandaloneRecForm
               groupId={groupId}
               user={user}
@@ -379,14 +341,15 @@ export default function GroupPage() {
                     </p>
                     <p className="text-sm text-gray-500 mb-2">
                       Category: {req.serviceType}
-                    </p><p className="font-medium">
-  <a
-    href={`/request/${req.id}`}
-    className="ml-2 text-blue-600 underline text-sm"
-  >
-    View Full Request →
-  </a>
-</p>
+                    </p>
+                    <p className="font-medium">
+                      <a
+                        href={`/request/${req.id}`}
+                        className="ml-2 text-blue-600 underline text-sm"
+                      >
+                        View Full Request →
+                      </a>
+                    </p>
 
                     {/* Direct Replies */}
                     {directRecs.length > 0 && (
