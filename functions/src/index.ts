@@ -60,6 +60,9 @@ exports.sendReplyEmail = functions.firestore
         return null;
       }
 
+      // 🆕 Add a link to the individual request page
+      const requestLink = `https://neighboroonie.com/request/${recData.linkedRequestId}`;
+
       const subject = "New reply to your recommendation request!";
       const emailContent = `
 Hi ${requestData.submittedBy?.name || "Neighbor"},
@@ -69,6 +72,8 @@ You asked for a recommendation, and ${recData.submittedBy?.name || "someone"} ju
 "${recData.testimonial}"
 
 Contact Info: ${recData.contactInfo || "N/A"}
+
+See their recommendation here: ${requestLink}
 
 Log in to Neighboroonie to see more details!
 
