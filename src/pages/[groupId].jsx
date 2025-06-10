@@ -318,6 +318,9 @@ export default function GroupPage() {
             <h2 className="text-xl font-semibold mb-2">
               Submit a General Recommendation
             </h2>
+            <p className="text-gray-600 text-sm mb-2">
+  👋 New here? Kick things off by recommending your absolute favorite contractor — it’s the best way to help your neighbors!
+</p>
             <StandaloneRecForm
               groupId={groupId}
               user={user}
