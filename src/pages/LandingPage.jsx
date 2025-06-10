@@ -58,34 +58,41 @@ export default function LandingPage() {
 
   return (
     <Layout user={user}>
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-purple-700 mb-4">neighboroonie</h1>
-        <p className="mb-6 text-gray-700">
-          A simple way to share and find trusted local recommendations.
-        </p>
-
+      <div>
         {!user ? (
-          <button onClick={handleLogin}>
-            Sign in with Google
-          </button>
+          <div className="text-center mb-6">
+            <button
+              onClick={handleLogin}
+              className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
+            >
+              Sign in with Google
+            </button>
+          </div>
         ) : (
-          <div className="mb-6">
+          <div className="text-center mb-6">
             <p className="text-gray-700 mb-2">Signed in as {user.displayName}</p>
-            <button onClick={handleLogout}>
+            <button
+              onClick={handleLogout}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded"
+            >
               Sign out
             </button>
           </div>
         )}
 
+        {/* 👋 Added community text */}
+        <p className="text-gray-600 text-sm text-center mb-6">
+          Neighboroonie is a private space where neighbors share and request trusted recommendations.
+        </p>
+
         <div className="bg-white rounded shadow p-4 max-w-xl mx-auto">
-          <h2 className="text-lg font-semibold mb-2">Looking for a group?</h2>
+          <h2 className="text-lg font-semibold mb-2">Looking to join a group?</h2>
           <p className="text-gray-600 mb-4">
-            Ask a neighbor or admin for an invite link to your local group, like{" "}
-            <code>/westville</code> or <code>/rena</code>.
+            Ask a neighbor or admin for an invite link to your local group — like{" "}
+            <code>/westville</code> or <code>/rena</code> — and join the conversation.
           </p>
         </div>
       </div>
     </Layout>
   );
 }
-
