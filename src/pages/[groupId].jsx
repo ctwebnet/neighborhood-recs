@@ -376,7 +376,14 @@ export default function GroupPage() {
                     </p>
                     <p className="text-sm text-gray-500 mb-2">
                       Category: {req.serviceType}
-                    </p>
+                    </p><p className="font-medium">
+  <a
+    href={`/request/${req.id}`}
+    className="ml-2 text-blue-600 underline text-sm"
+  >
+    View Full Request →
+  </a>
+</p>
 
                     {/* Direct Replies */}
                     {directRecs.length > 0 && (

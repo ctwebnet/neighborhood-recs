@@ -240,6 +240,16 @@ const RequestPage = () => {
             handleReplySubmit={handleReplySubmit}
             serviceTypes={serviceTypes}
           />
+          {request && (
+  <div className="mb-4">
+    <a
+      href={`/${request.groupId}`}
+      className="text-blue-600 underline text-sm"
+    >
+      ← Back to {request.groupId} Group
+    </a>
+  </div>
+)}
         </div>
       </div>
       <Footer user={user} />
