@@ -151,6 +151,17 @@ const RequestPage = () => {
     toast.success("Thanks! Your recommendation was submitted.");
     setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
   };
+  const handleShare = () => {
+  navigator.clipboard
+    .writeText(window.location.href)
+    .then(() => {
+      toast.success("Link copied to clipboard! Share it with neighbors!", { duration: 6000 });
+    })
+    .catch((error) => {
+      console.error("Failed to copy link:", error);
+      toast.error("Failed to copy link.");
+    });
+};
 
   const getMatchingRecs = (req) => {
     return recommendations.filter(
@@ -229,6 +240,17 @@ const RequestPage = () => {
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
+        <div className="flex justify-between items-center mb-4">
+  <h2 className="text-xl font-semibold">
+    Request Details
+  </h2>
+  <button
+    onClick={handleShare}
+    className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
+  >
+    Share Request
+  </button>
+</div>
           <Request
             request={request}
             directRecs={recommendations.filter(
