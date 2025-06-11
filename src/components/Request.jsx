@@ -11,6 +11,7 @@ const Request = ({
   serviceTypes
 }) => {
   return (
+    
     <div className="bg-white p-4 rounded shadow mb-6">
       <p className="font-medium">{request.text}</p>
       <p className="text-sm text-gray-500 mt-1">

@@ -33,6 +33,7 @@ export default function GroupPage() {
   const [recommendations, setRecommendations] = useState([]);
   const [newRequest, setNewRequest] = useState("");
   const [newRequestServiceType, setNewRequestServiceType] = useState("");
+  const [customServiceType, setCustomServiceType] = useState("");
   const [newReplies, setNewReplies] = useState({});
   const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,13 +134,24 @@ export default function GroupPage() {
   }, [user, groupExists, groupId, hasGroupAccess]);
 
   const handleRequestSubmit = async () => {
-    if (!newRequest.trim() || !newRequestServiceType.trim()) {
+    let finalServiceType = newRequestServiceType;
+    if (newRequestServiceType === "__custom") {
+      if (!customServiceType.trim()) {
+        alert("Please enter a custom service type.");
+        return;
+      }
+      finalServiceType = customServiceType.trim();
+      await setDoc(doc(db, "serviceTypes", finalServiceType), {});
+    }
+
+    if (!newRequest.trim() || !finalServiceType.trim()) {
       alert("Please enter both a request and a service type.");
       return;
     }
+
     await addDoc(collection(db, "requests"), {
       text: newRequest,
-      serviceType: newRequestServiceType,
+      serviceType: finalServiceType,
       groupId,
       createdAt: serverTimestamp(),
       submittedBy: {
@@ -150,6 +162,7 @@ export default function GroupPage() {
     toast.success("Thanks! Your request has been posted.");
     setNewRequest("");
     setNewRequestServiceType("");
+    setCustomServiceType("");
   };
 
   const handleReplySubmit = async (requestId) => {
@@ -219,8 +232,7 @@ export default function GroupPage() {
             Welcome to the {groupId} Group!
           </h1>
           <p className="text-gray-600 mb-4">
-            Neighboroonie is a private space where neighbors share and request
-            trusted recommendations. Sign in to join the conversation!
+            Neighboroonie is a private space where neighbors share and request trusted recommendations. Sign in to join the conversation!
           </p>
           <button
             onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
@@ -245,18 +257,6 @@ export default function GroupPage() {
           <p className="text-gray-600">
             Please ask a neighbor for an invite code to join this group.
           </p>
-        </div>
-        <Footer user={user} />
-      </>
-    );
-  }
-
-  if (hasGroupAccess === null) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gray-100 p-6 text-center">
-          <p className="text-lg text-gray-600">Checking group membership...</p>
         </div>
         <Footer user={user} />
       </>
@@ -292,9 +292,7 @@ export default function GroupPage() {
 
           {/* Request Form */}
           <div className="bg-white p-4 rounded shadow mb-6">
-            <h2 className="text-xl font-semibold mb-2">
-              Ask for a Recommendation
-            </h2>
+            <h2 className="text-xl font-semibold mb-2">Ask for a Recommendation</h2>
             <input
               className="w-full border p-2 mb-2"
               placeholder="What are you looking for?"
@@ -312,7 +310,16 @@ export default function GroupPage() {
                   {type}
                 </option>
               ))}
+              <option value="__custom">Other (Add a new category)</option>
             </select>
+            {newRequestServiceType === "__custom" && (
+              <input
+                className="w-full border p-2 mb-2"
+                placeholder="e.g., Furniture repair, piano tuner"
+                value={customServiceType}
+                onChange={(e) => setCustomServiceType(e.target.value)}
+              />
+            )}
             <button onClick={handleRequestSubmit} className="btn-primary">
               Submit Request
             </button>
@@ -331,10 +338,7 @@ export default function GroupPage() {
                 const matchedRecs = getMatchingRecs(req);
 
                 return (
-                  <div
-                    key={req.id}
-                    className="bg-white p-4 rounded shadow mb-6"
-                  >
+                  <div key={req.id} className="bg-white p-4 rounded shadow mb-6">
                     <p className="font-medium">{req.text}</p>
                     <p className="text-sm text-gray-500 mt-1">
                       Submitted by {req.submittedBy?.name || "unknown"}
@@ -356,21 +360,12 @@ export default function GroupPage() {
                       <>
                         <h4 className="mt-4 font-semibold">Replies</h4>
                         {directRecs.map((rec) => (
-                          <div
-                            key={rec.id}
-                            className="border border-gray-200 rounded p-2 bg-gray-50 mt-2"
-                          >
+                          <div key={rec.id} className="border border-gray-200 rounded p-2 bg-gray-50 mt-2">
                             <p className="font-semibold">{rec.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {rec.serviceType}
-                            </p>
+                            <p className="text-sm text-gray-500">{rec.serviceType}</p>
                             <p>{rec.testimonial}</p>
-                            <p className="text-sm text-gray-500 italic">
-                              {rec.contactInfo}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              – {rec.submittedBy?.name}
-                            </p>
+                            <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
+                            <p className="text-xs text-gray-400 mt-1">– {rec.submittedBy?.name}</p>
                           </div>
                         ))}
                       </>
@@ -383,21 +378,12 @@ export default function GroupPage() {
                           Other recommendations that might help
                         </h4>
                         {matchedRecs.map((rec) => (
-                          <div
-                            key={rec.id}
-                            className="border border-dashed border-gray-300 rounded p-2 bg-gray-50 mt-2"
-                          >
+                          <div key={rec.id} className="border border-dashed border-gray-300 rounded p-2 bg-gray-50 mt-2">
                             <p className="font-semibold">{rec.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {rec.serviceType}
-                            </p>
+                            <p className="text-sm text-gray-500">{rec.serviceType}</p>
                             <p>{rec.testimonial}</p>
-                            <p className="text-sm text-gray-500 italic">
-                              {rec.contactInfo}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              – {rec.submittedBy?.name}
-                            </p>
+                            <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
+                            <p className="text-xs text-gray-400 mt-1">– {rec.submittedBy?.name}</p>
                           </div>
                         ))}
                       </>
@@ -405,9 +391,7 @@ export default function GroupPage() {
 
                     {/* Reply Form */}
                     <div className="mt-4">
-                      <h4 className="font-medium mb-1">
-                        Add a Recommendation
-                      </h4>
+                      <h4 className="font-medium mb-1">Add a Recommendation</h4>
                       <input
                         className="w-full border p-2 mb-2"
                         placeholder="Who are you recommending?"

@@ -98,7 +98,7 @@ export default function StandaloneRecForm({ groupId, user }) {
             {type}
           </option>
         ))}
-        <option value="__custom">Other (enter manually)</option>
+        <option value="__custom">Other (Add a new category)</option>
       </select>
       {form.serviceType === "__custom" && (
         <input
