@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
+import SettingsPage from "./pages/Settings"; // ← Add this
 import GroupPage from "./pages/[groupId]";
 import AdminPage from "./pages/Admin";
 import Feedback from "./pages/Feedback";
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/settings" element={<SettingsPage />} /> {/* ← Add this */}
           <Route path="/:groupId" element={<GroupPage />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/request/:requestId" element={<RequestPage />} />
