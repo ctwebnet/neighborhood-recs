@@ -1,6 +1,5 @@
-// src/components/Footer.jsx
-
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { db } from "../firebase";
@@ -30,6 +29,14 @@ export default function Footer({ user }) {
       <div className="max-w-3xl mx-auto text-center">
         <p className="mb-2">
           Made with 🦩 by <a href="/" className="text-blue-500 hover:underline">Neighboroonie</a>
+          {user && (
+            <>
+              {" • "}
+              <Link to="/settings" className="text-blue-500 hover:underline">
+                Settings
+              </Link>
+            </>
+          )}
         </p>
 
         {user && (
@@ -41,9 +48,7 @@ export default function Footer({ user }) {
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
             />
-            <button onClick={handleSubmit}>
-              Submit Feedback
-            </button>
+            <button onClick={handleSubmit}>Submit Feedback</button>
           </div>
         )}
       </div>
