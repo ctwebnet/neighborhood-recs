@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   doc,
   getDoc,
+  getDocs,
   setDoc,
 } from "firebase/firestore";
 import {
@@ -65,21 +66,22 @@ const RequestPage = () => {
       setRequest({ id: requestSnap.id, ...requestData });
 
       const groupId = requestData.groupId;
-
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
+
+      let wasNewToGroup = false;
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
         if (userData.groupIds?.includes(groupId)) {
           setHasGroupAccess(true);
         } else {
-          // Let user join group by viewing request page
           await setDoc(userRef, {
             ...userData,
             groupIds: [...(userData.groupIds || []), groupId],
           });
           setHasGroupAccess(true);
+          wasNewToGroup = true;
         }
       } else {
         await setDoc(userRef, {
@@ -89,7 +91,27 @@ const RequestPage = () => {
           groupIds: [groupId],
         });
         setHasGroupAccess(true);
+        wasNewToGroup = true;
       }
+
+      if (wasNewToGroup) {
+  const usersSnap = await getDocs(collection(db, "users"));
+  const userCount = usersSnap.size;
+
+  toast(
+    `👋 Welcome! You’re user #${userCount} and just joined the ${groupId} group. We're in beta — feedback is welcome via the form in the footer.`,
+    {
+      icon: "🚀",
+      duration: 12000,
+      style: { maxWidth: "500px", lineHeight: "1.4" },
+      position: "top-center",
+      ariaProps: {
+        role: "status",
+        "aria-live": "polite",
+      },
+    }
+  );
+}
     };
 
     checkGroupAccess();
@@ -128,7 +150,10 @@ const RequestPage = () => {
   }, [user, request, requestId, hasGroupAccess]);
 
   const handleReplySubmit = async (requestId) => {
-    const reply = newReplies[requestId];
+    const reply = {
+      ...newReplies[requestId],
+      serviceType: request.serviceType,
+    };
     if (
       !reply?.name?.trim() ||
       !reply?.testimonial?.trim() ||
@@ -151,23 +176,24 @@ const RequestPage = () => {
     toast.success("Thanks! Your recommendation was submitted.");
     setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
   };
+
   const handleShare = () => {
-  navigator.clipboard
-    .writeText(window.location.href)
-    .then(() => {
-      toast.success("Link copied to clipboard! Share it with neighbors!", { duration: 6000 });
-    })
-    .catch((error) => {
-      console.error("Failed to copy link:", error);
-      toast.error("Failed to copy link.");
-    });
-};
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        toast.success("Link copied to clipboard! Share it with neighbors!", {
+          duration: 6000,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to copy link:", error);
+        toast.error("Failed to copy link.");
+      });
+  };
 
   const getMatchingRecs = (req) => {
     return recommendations.filter(
-      (rec) =>
-        rec.serviceType === req.serviceType &&
-        rec.linkedRequestId !== req.id
+      (rec) => rec.serviceType === req.serviceType && rec.linkedRequestId !== req.id
     );
   };
 
@@ -240,17 +266,15 @@ const RequestPage = () => {
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-        <div className="flex justify-between items-center mb-4">
-  <h2 className="text-xl font-semibold">
-    Request Details
-  </h2>
-  <button
-    onClick={handleShare}
-    className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
-  >
-    Share Request
-  </button>
-</div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Request Details</h2>
+            <button
+              onClick={handleShare}
+              className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
+            >
+              Share Request
+            </button>
+          </div>
           <Request
             request={request}
             directRecs={recommendations.filter(
@@ -263,15 +287,15 @@ const RequestPage = () => {
             serviceTypes={serviceTypes}
           />
           {request && (
-  <div className="mb-4">
-    <a
-      href={`/${request.groupId}`}
-      className="text-blue-600 underline text-sm"
-    >
-      ← Back to {request.groupId} Group
-    </a>
-  </div>
-)}
+            <div className="mb-4">
+              <a
+                href={`/${request.groupId}`}
+                className="text-blue-600 underline text-sm"
+              >
+                ← Back to {request.groupId} Group
+              </a>
+            </div>
+          )}
         </div>
       </div>
       <Footer user={user} />

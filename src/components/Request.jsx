@@ -11,7 +11,7 @@ const Request = ({
   serviceTypes
 }) => {
   return (
-    
+
     <div className="bg-white p-4 rounded shadow mb-6">
       <p className="font-medium">{request.text}</p>
       <p className="text-sm text-gray-500 mt-1">
@@ -82,26 +82,9 @@ const Request = ({
             }))
           }
         />
-        <select
-          className="w-full border p-2 mb-2"
-          value={newReplies[request.id]?.serviceType || ''}
-          onChange={(e) =>
-            setNewReplies((prev) => ({
-              ...prev,
-              [request.id]: {
-                ...prev[request.id],
-                serviceType: e.target.value
-              }
-            }))
-          }
-        >
-          <option value="">Select a service type</option>
-          {serviceTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+       <p className="mb-2 text-gray-700 text-sm">
+  Category: <span className="font-medium">{request.serviceType}</span>
+</p>
         <textarea
           className="w-full border p-2 mb-2"
           placeholder="What did they do for you, and how was the experience?"
