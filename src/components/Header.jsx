@@ -38,15 +38,17 @@ export default function Header() {
             </>
           ) : (
             <button
-              onClick={() =>
-                signInWithPopup(auth, new GoogleAuthProvider()).catch((err) =>
-                  console.error("Sign-in error:", err)
-                )
-              }
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs"
-            >
-              Sign In
-            </button>
+  onClick={() => {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).catch((error) => {
+      console.warn("Popup sign-in failed, falling back to redirect:", error);
+      signInWithRedirect(auth, provider);
+    });
+  }}
+  className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs"
+>
+  Sign In
+</button>
           )}
         </div>
       </div>
