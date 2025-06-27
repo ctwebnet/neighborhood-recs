@@ -9,6 +9,7 @@ import GroupPage from "./pages/[groupId]";
 import AdminPage from "./pages/Admin";
 import Feedback from "./pages/Feedback";
 import RequestPage from './pages/RequestPage';
+import MyListPage from "./pages/MyListPage";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/:groupId" element={<GroupPage />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/request/:requestId" element={<RequestPage />} />
+          <Route path="/my-list" element={<MyListPage />} />
         </Routes>
       </Router>
     </>
