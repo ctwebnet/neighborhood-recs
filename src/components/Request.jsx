@@ -1,5 +1,6 @@
 // src/components/Request.jsx
 import React from 'react';
+import { Link } from "react-router-dom";
 
 const Request = ({
   request,
@@ -35,8 +36,18 @@ const Request = ({
               <p>{rec.testimonial}</p>
               <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
               <p className="text-xs text-gray-400 mt-1">
-                – {rec.submittedBy?.name}
-              </p>
+  –{" "}
+  {rec.submittedByUid ? (
+    <Link
+      to={`/users/${rec.submittedByUid}`}
+      className="text-blue-600 underline hover:text-blue-800"
+    >
+      {rec.submittedBy?.name || "unknown"}
+    </Link>
+  ) : (
+    rec.submittedBy?.name || "unknown"
+  )}
+</p>
             </div>
           ))}
         </>
@@ -58,8 +69,18 @@ const Request = ({
               <p>{rec.testimonial}</p>
               <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
               <p className="text-xs text-gray-400 mt-1">
-                – {rec.submittedBy?.name}
-              </p>
+  –{" "}
+  {rec.submittedByUid ? (
+    <Link
+      to={`/users/${rec.submittedByUid}`}
+      className="text-blue-600 underline hover:text-blue-800"
+    >
+      {rec.submittedBy?.name || "unknown"}
+    </Link>
+  ) : (
+    rec.submittedBy?.name || "unknown"
+  )}
+</p>
             </div>
           ))}
         </>
