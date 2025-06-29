@@ -2,7 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useParams } from "react-router-dom";
+import { useParams, Link  } from "react-router-dom";
 import {
   collection,
   addDoc,
@@ -185,6 +185,7 @@ export default function GroupPage() {
         name: user.displayName,
         email: user.email,
       },
+      submittedByUid: user.uid,
     });
     toast.success("Thanks! Your recommendation was submitted.");
     setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
@@ -365,7 +366,19 @@ export default function GroupPage() {
                             <p className="text-sm text-gray-500">{rec.serviceType}</p>
                             <p>{rec.testimonial}</p>
                             <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-                            <p className="text-xs text-gray-400 mt-1">– {rec.submittedBy?.name}</p>
+                            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+  –{" "}
+  {rec.submittedByUid ? (
+    <Link
+      to={`/users/${rec.submittedByUid}`}
+      className="text-blue-600 underline hover:text-blue-800"
+    >
+      {rec.submittedBy?.name || "unknown"}
+    </Link>
+  ) : (
+    rec.submittedBy?.name || "unknown"
+  )}
+</p>
                           </div>
                         ))}
                       </>
@@ -383,7 +396,19 @@ export default function GroupPage() {
                             <p className="text-sm text-gray-500">{rec.serviceType}</p>
                             <p>{rec.testimonial}</p>
                             <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-                            <p className="text-xs text-gray-400 mt-1">– {rec.submittedBy?.name}</p>
+                            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+  –{" "}
+  {rec.submittedByUid ? (
+    <Link
+      to={`/users/${rec.submittedByUid}`}
+      className="text-blue-600 underline hover:text-blue-800"
+    >
+      {rec.submittedBy?.name || "unknown"}
+    </Link>
+  ) : (
+    rec.submittedBy?.name || "unknown"
+  )}
+</p>
                           </div>
                         ))}
                       </>
