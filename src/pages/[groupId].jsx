@@ -2,7 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useParams, Link  } from "react-router-dom";
+import { useParams, Link, useNavigate  } from "react-router-dom";
 import {
   collection,
   addDoc,
@@ -26,6 +26,7 @@ import StandaloneRecForm from "../components/StandaloneRecForm";
 
 export default function GroupPage() {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [groupExists, setGroupExists] = useState(null);
   const [hasGroupAccess, setHasGroupAccess] = useState(null);
@@ -166,30 +167,34 @@ export default function GroupPage() {
   };
 
   const handleReplySubmit = async (requestId) => {
-    const reply = newReplies[requestId];
-    if (
-      !reply?.name?.trim() ||
-      !reply?.testimonial?.trim() ||
-      !reply?.contactInfo?.trim() ||
-      !reply?.serviceType?.trim()
-    ) {
-      alert("Please fill out all fields.");
-      return;
-    }
-    await addDoc(collection(db, "recommendations"), {
-      ...reply,
-      groupId,
-      linkedRequestId: requestId,
-      createdAt: serverTimestamp(),
-      submittedBy: {
-        name: user.displayName,
-        email: user.email,
-      },
-      submittedByUid: user.uid,
-    });
-    toast.success("Thanks! Your recommendation was submitted.");
-    setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
-  };
+  const reply = newReplies[requestId];
+  if (
+    !reply?.name?.trim() ||
+    !reply?.testimonial?.trim() ||
+    !reply?.contactInfo?.trim() ||
+    !reply?.serviceType?.trim()
+  ) {
+    alert("Please fill out all fields.");
+    return;
+  }
+  await addDoc(collection(db, "recommendations"), {
+    ...reply,
+    groupId,
+    linkedRequestId: requestId,
+    createdAt: serverTimestamp(),
+    submittedBy: {
+      name: user.displayName,
+      email: user.email,
+    },
+    submittedByUid: user.uid,
+  });
+  toast.success("Thanks! Your recommendation was submitted.");
+  setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
+
+  setTimeout(() => {
+    navigate("/my-list");
+  }, 1500); // Delay allows the toast to display before redirect
+};
 
   const getMatchingRecs = (req) => {
     return recommendations.filter(
