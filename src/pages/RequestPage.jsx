@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import {
   collection,
@@ -25,6 +26,7 @@ import { Toaster, toast } from "react-hot-toast";
 import Request from "../components/Request";
 
 const RequestPage = () => {
+  const navigate = useNavigate();
   const { requestId } = useParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -172,9 +174,12 @@ const RequestPage = () => {
         name: user.displayName,
         email: user.email,
       },
+      submittedByUid: user.uid,
     });
     toast.success("Thanks! Your recommendation was submitted.");
-    setNewReplies((prev) => ({ ...prev, [requestId]: {} }));
+setTimeout(() => {
+  navigate("/my-list");
+}, 1500);
   };
 
   const handleShare = () => {
