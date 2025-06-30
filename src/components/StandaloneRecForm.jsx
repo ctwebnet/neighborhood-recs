@@ -1,5 +1,6 @@
 import { toast } from "react-hot-toast";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   addDoc,
   collection,
@@ -20,6 +21,7 @@ export default function StandaloneRecForm({ groupId, user }) {
   });
 
   const [serviceTypes, setServiceTypes] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchServiceTypes = async () => {
@@ -50,7 +52,6 @@ export default function StandaloneRecForm({ groupId, user }) {
       return;
     }
 
-    // Save custom service type to the global collection
     if (form.serviceType === "__custom" && finalServiceType) {
       await setDoc(doc(db, "serviceTypes", finalServiceType), {});
     }
@@ -66,6 +67,7 @@ export default function StandaloneRecForm({ groupId, user }) {
         name: user.displayName,
         email: user.email,
       },
+      submittedByUid: user.uid,
     });
 
     toast.success("Thanks! Your recommendation was submitted.");
@@ -77,6 +79,10 @@ export default function StandaloneRecForm({ groupId, user }) {
       testimonial: "",
       contactInfo: "",
     });
+
+    setTimeout(() => {
+      navigate("/my-list");
+    }, 1500);
   };
 
   return (
