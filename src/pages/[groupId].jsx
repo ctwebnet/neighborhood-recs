@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   doc,
   getDoc,
+  getDocs, 
   setDoc,
 } from "firebase/firestore";
 import {
@@ -27,6 +28,8 @@ import StandaloneRecForm from "../components/StandaloneRecForm";
 export default function GroupPage() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const [groupUserCount, setGroupUserCount] = useState(null);
+  const [userGroupIndex, setUserGroupIndex] = useState(null);
   const [user, setUser] = useState(null);
   const [groupExists, setGroupExists] = useState(null);
   const [hasGroupAccess, setHasGroupAccess] = useState(null);
@@ -40,52 +43,71 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+  const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    setUser(currentUser);
+    setLoading(false);
 
-      if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
+    if (!currentUser) return;
 
-        let firstName = "";
-        let lastName = "";
-        if (currentUser.displayName) {
-          const nameParts = currentUser.displayName.split(" ");
-          firstName = nameParts[0] || "";
-          lastName = nameParts.slice(1).join(" ") || "";
-        }
+    const userRef = doc(db, "users", currentUser.uid);
+    const userSnap = await getDoc(userRef);
 
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            email: currentUser.email,
-            firstName,
-            lastName,
-            groupIds: [groupId],
-          });
-          setHasGroupAccess(true);
-        } else {
-          const userData = userSnap.data();
-          if (!userData.groupIds) {
-            await setDoc(userRef, {
-              ...userData,
-              groupIds: [groupId],
-            });
-            setHasGroupAccess(true);
-          } else if (!userData.groupIds.includes(groupId)) {
-            await setDoc(userRef, {
-              ...userData,
-              groupIds: [...userData.groupIds, groupId],
-            });
-            setHasGroupAccess(true);
-          } else {
-            setHasGroupAccess(true);
-          }
-        }
+    let firstName = "";
+    let lastName = "";
+    if (currentUser.displayName) {
+      const nameParts = currentUser.displayName.split(" ");
+      firstName = nameParts[0] || "";
+      lastName = nameParts.slice(1).join(" ") || "";
+    }
+
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        email: currentUser.email,
+        firstName,
+        lastName,
+        groupIds: [groupId],
+      });
+      setHasGroupAccess(true);
+    } else {
+      const userData = userSnap.data();
+      if (!userData.groupIds) {
+        await setDoc(userRef, {
+          ...userData,
+          groupIds: [groupId],
+        });
+        setHasGroupAccess(true);
+      } else if (!userData.groupIds.includes(groupId)) {
+        await setDoc(userRef, {
+          ...userData,
+          groupIds: [...userData.groupIds, groupId],
+        });
+        setHasGroupAccess(true);
+      } else {
+        setHasGroupAccess(true);
       }
-    });
-    return () => unsubscribeAuth();
-  }, [groupId]);
+    }
+
+    // Always check group index and count once user is valid
+    try {
+      const usersSnap = await getDocs(collection(db, "users"));
+      const groupUsers = usersSnap.docs.filter(doc =>
+        doc.data().groupIds?.includes(groupId)
+      );
+      setGroupUserCount(groupUsers.length);
+
+      const sortedGroupUsers = groupUsers.sort((a, b) =>
+        a.data().email.localeCompare(b.data().email)
+      );
+
+      const index = sortedGroupUsers.findIndex(u => u.id === currentUser.uid);
+      setUserGroupIndex(index >= 0 ? index + 1 : null);
+    } catch (error) {
+      console.error("Error calculating group index:", error);
+    }
+  });
+
+  return () => unsubscribeAuth();
+}, [groupId]);
 
   useEffect(() => {
     const checkGroup = async () => {
@@ -274,12 +296,14 @@ export default function GroupPage() {
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">Welcome to {groupId}</h1>
-            <button onClick={() => signOut(auth)} className="btn-secondary">
-              Sign out
-            </button>
-          </div>
+          <div>
+  <h1 className="text-3xl font-bold">Welcome to {groupId.toUpperCase()}</h1>
+  {userGroupIndex !== null && groupUserCount !== null && (
+    <p className="text-gray-600 text-sm mt-2">
+      You’re user #{userGroupIndex} of {groupUserCount} in this group.
+    </p>
+  )}
+</div>
 
           {/* Standalone Recommendation Form */}
           <div className="bg-white p-4 rounded shadow mb-6">
