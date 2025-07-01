@@ -311,7 +311,7 @@ export default function GroupPage() {
               Submit a General Recommendation
             </h2>
             <p className="text-gray-600 text-sm mb-2">
-              👋 New here? Kick things off by recommending your absolute favorite contractor — it’s the best way to help your neighbors!
+              👋 New here? Kick things off by recommending your absolute favorite contractor.
             </p>
             <StandaloneRecForm
               groupId={groupId}
