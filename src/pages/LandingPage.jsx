@@ -1,98 +1,120 @@
-// src/pages/LandingPage.jsx
-import { useState, useEffect } from "react";
-import { auth, db } from "../firebase";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
 import {
-  onAuthStateChanged,
   signInWithPopup,
-  signOut,
   GoogleAuthProvider,
+  signInWithRedirect,
 } from "firebase/auth";
 import {
   collection,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
 } from "firebase/firestore";
-import toast from "react-hot-toast";
-import Layout from "../components/Layout";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth, db } from "../firebase";
 
 export default function LandingPage() {
-  const [user, setUser] = useState(null);
-  const [feedback, setFeedback] = useState("");
+  const [user] = useAuthState(auth);
+  const [location, setLocation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogin = () => {
+  const handleSignIn = () => {
     const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider).catch((err) => {
-      console.error("Login failed", err);
-      toast.error("Login failed");
+    signInWithPopup(auth, provider).catch((error) => {
+      console.warn("Popup sign-in failed, falling back to redirect:", error);
+      signInWithRedirect(auth, provider);
     });
   };
 
-  const handleLogout = () => {
-    signOut(auth).catch((err) => {
-      console.error("Logout failed", err);
-      toast.error("Logout failed");
-    });
-  };
-
-  const handleSubmitFeedback = async () => {
-    if (!feedback.trim()) return;
+  const handleSubmit = async () => {
+    if (!location.trim()) {
+      toast.error("Please enter a location.");
+      return;
+    }
 
     try {
-      await addDoc(collection(db, "feedback"), {
-        message: feedback,
-        email: user?.email || "",
-        createdAt: serverTimestamp()
+      setLoading(true);
+      await addDoc(collection(db, "groupRequests"), {
+        location: location.trim(),
+        notes: notes.trim(),
+        submittedBy: {
+          name: user.displayName,
+          email: user.email,
+        },
+        submittedByUid: user.uid,
+        createdAt: serverTimestamp(),
       });
-      toast.success("Feedback submitted!");
-      setFeedback("");
+
+      toast.success("Thanks! We'll be in touch soon.");
+      setLocation("");
+      setNotes("");
     } catch (err) {
-      console.error("Error submitting feedback", err);
-      toast.error("Error submitting feedback");
+      console.error("Error submitting group request:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Layout user={user}>
-      <div>
-        {!user ? (
-          <div className="text-center mb-6">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-100 py-10 px-4 text-center">
+  <img
+    src="/android-chrome-512x512.png"
+    alt="Neighboroonie logo"
+    className="mx-auto mb-6 w-24 h-24"
+  />
+  <h1 className="text-4xl font-bold mb-4">
+    Welcome to neighboroonie
+  </h1>
+  <p className="text-gray-600 mb-6 max-w-xl mx-auto">
+    Neighboroonie is new. A few communities are already using it, and we’re looking for a handful more to help guide what comes next.
+  </p>
+
+        {user ? (
+          <div className="bg-white rounded-lg shadow p-6 max-w-xl mx-auto mt-8">
+            <h2 className="text-2xl font-bold mb-4 text-center">
+              Start a Neighboroonie Group
+            </h2>
+            <p className="text-gray-600 text-sm mb-4 text-center">
+              Let us know where you'd like to start a group. We'll notify you as soon as it's ready!
+            </p>
+            <input
+              className="w-full border p-2 mb-3"
+              placeholder="Neighborhood, town, or zip code"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+            <textarea
+              className="w-full border p-2 mb-3"
+              placeholder="Anything else you'd like us to know?"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
             <button
-              onClick={handleLogin}
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="btn-primary w-full"
             >
-              Sign in with Google
+              {loading ? "Submitting..." : "Request a Group"}
             </button>
           </div>
         ) : (
-          <div className="text-center mb-6">
-            <p className="text-gray-700 mb-2">Signed in as {user.displayName}</p>
-            <button
-              onClick={handleLogout}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded"
-            >
-              Sign out
+          <div className="text-center mt-6">
+            <p className="text-gray-600 mb-2">
+              Sign in to request a Neighboroonie group
+            </p>
+            <button onClick={handleSignIn} className="btn-primary">
+              Sign in with Google
             </button>
           </div>
         )}
-
-        {/* 👋 Added community text */}
-        <p className="text-gray-600 text-sm text-center mb-6">
-          Neighboroonie is a private space where neighbors share and request trusted recommendations.
-        </p>
-
-        <div className="bg-white rounded shadow p-4 max-w-xl mx-auto">
-          <h2 className="text-lg font-semibold mb-2">Looking to join a group?</h2>
-          <p className="text-gray-600 mb-4">
-            Ask a neighbor or admin for an invite link to your local group — like{" "}
-            <code>/westville</code> or <code>/rena</code> — and join the conversation.
-          </p>
-        </div>
       </div>
-    </Layout>
+      <Footer user={user} />
+    </>
   );
 }
