@@ -305,22 +305,7 @@ export default function GroupPage() {
     </p>
   )}
 </div>
-
-          {/* Standalone Recommendation Form */}
-          <div className="bg-white p-4 rounded shadow mb-6">
-            <h2 className="text-xl font-semibold mb-2">
-              Submit a General Recommendation
-            </h2>
-            <p className="text-gray-600 text-sm mb-2">
-              👋 New here? Shout out a contractor or service provider who you'd highly recommend.
-            </p>
-            <StandaloneRecForm
-              groupId={groupId}
-              user={user}
-              serviceTypeOptions={serviceTypes}
-            />
-          </div>
-          {/* Search and Request Form */}
+{/* Search and Request Form */}
 <CategorySearchAndPrompt
   serviceTypes={serviceTypes}
   recommendations={recommendations}
@@ -347,6 +332,21 @@ export default function GroupPage() {
     navigate(`/request/${docRef.id}`);
   }}
 />
+
+          {/* Standalone Recommendation Form */}
+          <div className="bg-white p-4 rounded shadow mb-6">
+            <h2 className="text-xl font-semibold mb-2">
+              Submit a General Recommendation
+            </h2>
+            <p className="text-gray-600 text-sm mb-2">
+              👋 New here? Shout out a contractor or service provider who you'd highly recommend.
+            </p>
+            <StandaloneRecForm
+              groupId={groupId}
+              user={user}
+              serviceTypeOptions={serviceTypes}
+            />
+          </div>
          
           {/* Request Form */}
 {/*
