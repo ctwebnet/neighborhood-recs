@@ -24,6 +24,7 @@ import {
 } from "firebase/auth";
 import { db, auth } from "../firebase";
 import StandaloneRecForm from "../components/StandaloneRecForm";
+import CategorySearchAndPrompt from "../components/CategorySearchAndPrompt";
 
 export default function GroupPage() {
   const { groupId } = useParams();
@@ -311,7 +312,7 @@ export default function GroupPage() {
               Submit a General Recommendation
             </h2>
             <p className="text-gray-600 text-sm mb-2">
-              👋 New here? Kick things off by recommending your absolute favorite contractor.
+              👋 New here? Shout out a contractor or service provider who you'd highly recommend.
             </p>
             <StandaloneRecForm
               groupId={groupId}
@@ -319,8 +320,36 @@ export default function GroupPage() {
               serviceTypeOptions={serviceTypes}
             />
           </div>
+          {/* Search and Request Form */}
+<CategorySearchAndPrompt
+  serviceTypes={serviceTypes}
+  recommendations={recommendations}
+  onPrefillRequest={async (category, text) => {
+    // Check if serviceType exists in Firestore
+    const categoryRef = doc(db, "serviceTypes", category);
+    const snap = await getDoc(categoryRef);
+    if (!snap.exists()) {
+      await setDoc(categoryRef, { createdAt: serverTimestamp() });
+    }
 
+    const docRef = await addDoc(collection(db, "requests"), {
+      text,
+      serviceType: category,
+      groupId,
+      createdAt: serverTimestamp(),
+      submittedBy: {
+        name: user.displayName,
+        email: user.email,
+      },
+      submittedByUid: user.uid,
+    });
+
+    navigate(`/request/${docRef.id}`);
+  }}
+/>
+         
           {/* Request Form */}
+{/*
           <div className="bg-white p-4 rounded shadow mb-6">
             <h2 className="text-xl font-semibold mb-2">Ask for a Recommendation</h2>
             <input
@@ -353,11 +382,10 @@ export default function GroupPage() {
             <button onClick={handleRequestSubmit} className="btn-primary">
               Submit Request
             </button>
-          </div>
-
+          </div>*/}
           {/* Requests & Replies */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-2">Requests</h2>
+            <h2 className="text-xl font-semibold mb-2">Recent Requests for Recommendations</h2>
             {requests.length === 0 ? (
               <p className="text-gray-500 italic">No requests yet.</p>
             ) : (
