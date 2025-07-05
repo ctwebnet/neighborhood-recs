@@ -263,6 +263,7 @@ export default function GroupPage() {
           <p className="text-gray-600 mb-4">
             Neighboroonie is a private space where neighbors share and request trusted recommendations. Sign in to join the conversation!
           </p>
+
           <button
             onClick={() => signInWithPopup(auth, new GoogleAuthProvider())}
             className="btn-primary"
@@ -297,10 +298,10 @@ export default function GroupPage() {
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto">
-          <div>
-  <h1 className="text-3xl font-bold">Welcome to {groupId.toUpperCase()}</h1>
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-4">
+  <h1 className="text-3xl font-bold">{groupId.charAt(0).toUpperCase() + groupId.slice(1)} Trusted Recommendations</h1>
   {userGroupIndex !== null && groupUserCount !== null && (
-    <p className="text-gray-600 text-sm mt-2">
+    <p className="text-gray-600 text-sm sm:ml-4 sm:mt-0 mt-2">
       You’re user #{userGroupIndex} of {groupUserCount} in this group.
     </p>
   )}
