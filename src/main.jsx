@@ -11,6 +11,7 @@ import Feedback from "./pages/Feedback";
 import RequestPage from './pages/RequestPage';
 import MyListPage from "./pages/MyListPage";
 import UserListPage from "./pages/UserListPage";
+import StandaloneRecPage from "./pages/StandaloneRecPage";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/request/:requestId" element={<RequestPage />} />
           <Route path="/my-list" element={<MyListPage />} />
           <Route path="/users/:uid" element={<UserListPage />} />
+          <Route path="/recommendations/:recId" element={<StandaloneRecPage />} />
         </Routes>
       </Router>
     </>
