@@ -65,7 +65,7 @@ const [requestText, setRequestText] = useState("");
               <ul className="list-disc pl-4 text-sm text-gray-700">
                 {matchingRecs.slice(0, 3).map((rec) => (
                   <li key={rec.id}>
-                    <span className="font-semibold">{rec.name}</span>: {rec.testimonial.slice(0, 100)}...
+                    <span className="font-semibold">{rec.name}</span>: {rec.testimonial}
                     <span className="text-xs text-gray-500 ml-2">
                       – <Link to={`/users/${rec.submittedByUid}`} className="text-blue-600 underline">{rec.submittedBy?.name || "unknown"}</Link>
                     </span>
