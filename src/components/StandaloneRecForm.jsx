@@ -11,14 +11,22 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 
-export default function StandaloneRecForm({ groupId, user }) {
+export default function StandaloneRecForm({
+  groupId,
+  user,
+  defaultServiceType = "",
+  serviceTypeOptions = [],
+  allowCustomServiceType = false,
+  onDone,
+}) {
   const [form, setForm] = useState({
     name: "",
-    serviceType: "",
+    serviceType: defaultServiceType || "",
     customServiceType: "",
     testimonial: "",
     contactInfo: "",
   });
+
 
   const [serviceTypes, setServiceTypes] = useState([]);
   const navigate = useNavigate();
@@ -31,6 +39,7 @@ export default function StandaloneRecForm({ groupId, user }) {
     };
     fetchServiceTypes();
   }, []);
+  
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));

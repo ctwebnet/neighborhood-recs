@@ -26,6 +26,8 @@ const MyListPage = () => {
   const [userGroups, setUserGroups] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [addingNewCategory, setAddingNewCategory] = useState(false);
+
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -196,6 +198,7 @@ const MyListPage = () => {
                     )
                   ))}
 
+
                   {addingCategory === type && (
                     <>
                       {userGroups.length > 1 && (
@@ -232,6 +235,57 @@ const MyListPage = () => {
                 </div>
               );
             })}
+<div className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
+  <div className="flex justify-between items-center mb-2">
+    <h3 className="font-semibold">New Category</h3>
+    {!addingNewCategory && (
+      <button
+        className="text-green-600 hover:text-green-800 text-sm font-medium"
+        onClick={() => {
+          setAddingCategory(null); // clear any other add state
+          setEditingId(null);     // clear any editing
+          setAddingNewCategory(true);
+        }}
+      >
+        + Add
+      </button>
+    )}
+  </div>
+
+  {addingNewCategory && (
+    <>
+      {userGroups.length > 1 && (
+        <div className="mb-4">
+          <label
+            htmlFor="group-select-new"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Select group
+          </label>
+          <select
+            id="group-select-new"
+            value={selectedGroupId}
+            onChange={(e) => setSelectedGroupId(e.target.value)}
+            className="w-full border p-2 rounded"
+          >
+            {userGroups.map((groupId) => (
+              <option key={groupId} value={groupId}>
+                {groupId}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <StandaloneRecForm
+        groupId={selectedGroupId || userGroups[0]}
+        user={user}
+        serviceTypeOptions={allServiceTypes}
+        allowCustomServiceType={true}
+        onDone={() => setAddingNewCategory(false)}
+      />
+    </>
+  )}
+</div>
           </div>
         </div>
       )}
