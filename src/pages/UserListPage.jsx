@@ -12,7 +12,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 
 const UserListPage = () => {
   const { uid } = useParams();
@@ -113,8 +113,23 @@ const UserListPage = () => {
           ) : (
             recommendations.map((rec) => (
               <div key={rec.id} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
-                <p className="font-semibold">{rec.name}</p>
-                <p className="text-sm text-gray-500">{rec.serviceType}</p>
+                <div className="flex justify-between items-start">
+  <div>
+    <p className="font-semibold">{rec.name}</p>
+    <p className="text-sm text-gray-500">{rec.serviceType}</p>
+  </div>
+  <button
+    onClick={() => {
+      navigator.clipboard.writeText(
+        `${window.location.origin}/recommendations/${rec.id}`
+      );
+      toast.success("Link copied to clipboard");
+    }}
+    className="bg-green-500 hover:bg-green-600 text-white font-semibold text-sm py-1 px-3 rounded"
+  >
+    Share
+  </button>
+</div>
                 <p className="mt-1">{rec.testimonial}</p>
                 <p className="text-sm text-gray-500 italic mt-1">{rec.contactInfo}</p>
                 <p className="text-xs text-gray-400 mt-2">Group: {rec.groupId}</p>
