@@ -29,6 +29,18 @@ const StandaloneRecPage = () => {
   const [groupRecs, setGroupRecs] = useState([]);
   const [hasGroupAccess, setHasGroupAccess] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasThanked, setHasThanked] = useState(false);
+const [thanksCount, setThanksCount] = useState(0);
+const handleThank = async () => {
+  if (!rec || hasThanked) return;
+  const recRef = doc(db, "recommendations", rec.id);
+  const updatedThanks = { ...(rec.thanks || {}), [user.uid]: true };
+
+  await setDoc(recRef, { ...rec, thanks: updatedThanks });
+
+  setHasThanked(true);
+  setThanksCount(Object.keys(updatedThanks).length);
+};
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -59,6 +71,10 @@ const StandaloneRecPage = () => {
 
       const recData = recSnap.data();
       setRec({ id: recSnap.id, ...recData });
+      const thanks = recData.thanks || {};
+setHasThanked(thanks[user.uid] === true);
+setThanksCount(Object.keys(thanks).length);
+
 
       const groupId = recData.groupId;
       const userRef = doc(db, "users", user.uid);
@@ -194,7 +210,20 @@ const StandaloneRecPage = () => {
             {rec.submittedBy?.name || "unknown"}
           </Link>
         </p>
-
+<div className="mb-4">
+  <button
+    onClick={handleThank}
+    className={`px-4 py-2 rounded ${
+      hasThanked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 text-white"
+    }`}
+    disabled={hasThanked}
+  >
+    {hasThanked ? "Thanks sent!" : "Say Thanks"}
+  </button>
+  {thanksCount > 0 && (
+    <span className="ml-2 text-sm text-gray-600">{thanksCount} thanked this</span>
+  )}
+</div>
         {groupRecs.length > 0 && (
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-2">
