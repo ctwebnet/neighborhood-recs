@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mui/icons-material": "^7.1.2",
     "firebase": "^11.6.1",
+    "googleapis": "^152.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-firebase-hooks": "^5.1.1",
