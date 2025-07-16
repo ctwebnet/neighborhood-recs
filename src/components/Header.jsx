@@ -57,7 +57,7 @@ export default function Header() {
                 to={`/${groupId}`}
                 className="text-blue-600 underline hover:text-blue-800"
               >
-                {groupId}
+                {groupId.charAt(0).toUpperCase() + groupId.slice(1)}
               </Link>
             ))}
           </nav>
