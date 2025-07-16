@@ -32,7 +32,6 @@ export default async function handler(req, res) {
 
     const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
 
-    // ✅ INIT FIREBASE ADMIN FROM ENV VAR
     const serviceAccount = JSON.parse(
       Buffer.from(FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8')
     );
@@ -58,8 +57,6 @@ export default async function handler(req, res) {
 
       const from = get('From');
       const to = get('To');
-      const subject = get('Subject');
-      const snippet = full.data.snippet || '';
 
       if (!to.includes('requests@neighboroonie.com')) continue;
 
@@ -73,6 +70,19 @@ export default async function handler(req, res) {
 
       if (usersSnap.empty) continue;
 
+      // ✅ Extract full plain-text body
+      let body = '';
+      const parts = full.data.payload.parts || [];
+      for (const part of parts) {
+        if (part.mimeType === 'text/plain' && part.body?.data) {
+          body = Buffer.from(part.body.data, 'base64').toString('utf-8').trim();
+          break;
+        }
+      }
+
+      const fallbackText = full.data.snippet?.trim() || '(No content)';
+      const requestText = body || fallbackText;
+
       const userData = usersSnap.docs[0].data();
       const groupIds = userData.groupIds || [];
 
@@ -84,9 +94,9 @@ export default async function handler(req, res) {
             name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
             email: senderEmail,
           },
-          requestText: snippet,
+          text: requestText,
           createdAt: new Date(),
-          serviceType: 'internet service provider', // Eventually make dynamic
+          serviceType: 'internet service provider',
         });
         created++;
       }
