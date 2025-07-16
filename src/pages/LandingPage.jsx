@@ -72,7 +72,7 @@ export default function LandingPage() {
     Welcome to neighboroonie
   </h1>
   <p className="text-gray-600 mb-6 max-w-xl mx-auto">
-    Neighboroonie is new. A few communities are already using it, and we’re looking for a handful more to help guide what comes next.
+    Neighboroonie is new and in beta. A couple communities are starting to try it out, and we’re looking for a handful more to help guide what comes next. Ask a neighbor for a link to your neighborhood group or...
   </p>
 
         {user ? (
