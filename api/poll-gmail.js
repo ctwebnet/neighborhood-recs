@@ -42,6 +42,9 @@ export default async function handler(req, res) {
 
     const db = getFirestore();
 
+    const serviceTypesSnap = await db.collection('serviceTypes').get();
+    const serviceTypes = serviceTypesSnap.docs.map((doc) => doc.data().name.toLowerCase());
+
     const resList = await gmail.users.messages.list({
       userId: 'me',
       maxResults: 5,
@@ -57,7 +60,6 @@ export default async function handler(req, res) {
 
       const from = get('From');
       const to = get('To');
-
       if (!to.includes('requests@neighboroonie.com')) continue;
 
       const match = from.match(/<(.+?)>/);
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
 
       if (usersSnap.empty) continue;
 
-      // ✅ Extract full plain-text body
+      // Extract text/plain body
       let body = '';
       const parts = full.data.payload.parts || [];
       for (const part of parts) {
@@ -82,6 +84,15 @@ export default async function handler(req, res) {
 
       const fallbackText = full.data.snippet?.trim() || '(No content)';
       const requestText = body || fallbackText;
+
+      // 🔍 Match against known serviceTypes
+      let matchedType = 'general';
+      for (const type of serviceTypes) {
+        if (requestText.toLowerCase().includes(type)) {
+          matchedType = type;
+          break;
+        }
+      }
 
       const userData = usersSnap.docs[0].data();
       const groupIds = userData.groupIds || [];
@@ -96,7 +107,7 @@ export default async function handler(req, res) {
           },
           text: requestText,
           createdAt: new Date(),
-          serviceType: 'internet service provider',
+          serviceType: matchedType,
         });
         created++;
       }
