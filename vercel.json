@@ -1,5 +1,11 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
+  ],
+  "crons": [
+    {
+      "path": "/api/poll-gmail",
+      "schedule": "*/5 * * * *"
+    }
   ]
 }
