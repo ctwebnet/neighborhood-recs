@@ -19,14 +19,14 @@ export default function StandaloneRecForm({
   allowCustomServiceType = false,
   onDone,
 }) {
-  const [form, setForm] = useState({
-    name: "",
-    serviceType: defaultServiceType || "",
-    customServiceType: "",
-    testimonial: "",
-    contactInfo: "",
-  });
-
+const [form, setForm] = useState({
+  name: "",
+  serviceType: defaultServiceType || "",
+  customServiceType: "",
+  testimonial: "",
+  contactInfo: "",
+  showSuggestions: false,
+});
 
   const [serviceTypes, setServiceTypes] = useState([]);
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export default function StandaloneRecForm({
     };
     fetchServiceTypes();
   }, []);
-  
+
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -102,19 +102,42 @@ export default function StandaloneRecForm({
         value={form.name}
         onChange={(e) => handleChange("name", e.target.value)}
       />
-      <select
-        className="w-full border p-2 mb-2"
-        value={form.serviceType}
-        onChange={(e) => handleChange("serviceType", e.target.value)}
-      >
-        <option value="">Select a service type</option>
-        {serviceTypes.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-        <option value="__custom">Other (Add a new category)</option>
-      </select>
+     <input
+  className="w-full border p-2 mb-1"
+  placeholder="Service type (e.g., electrician, piano tuner)"
+  value={form.serviceType}
+  onChange={(e) => handleChange("serviceType", e.target.value)}
+  onFocus={() => handleChange("showSuggestions", true)}
+  onBlur={() => setTimeout(() => handleChange("showSuggestions", false), 200)}
+/>
+{form.serviceType && form.showSuggestions !== false && (
+  <ul className="border border-gray-300 rounded bg-white max-h-48 overflow-y-auto text-sm">
+    {serviceTypes
+      .filter((type) =>
+        type.toLowerCase().includes(form.serviceType.toLowerCase())
+      )
+      .slice(0, 5)
+      .map((match) => (
+        <li
+          key={match}
+          className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+          onMouseDown={() => {
+            handleChange("serviceType", match);
+            handleChange("showSuggestions", false);
+          }}
+        >
+          {match}
+        </li>
+      ))}
+    {!serviceTypes.some(
+      (type) => type.toLowerCase() === form.serviceType.toLowerCase()
+    ) && (
+      <li className="px-3 py-2 text-gray-400 italic">
+        Will be added as new category
+      </li>
+    )}
+  </ul>
+)}
       {form.serviceType === "__custom" && (
         <input
           className="w-full border p-2 mb-2"

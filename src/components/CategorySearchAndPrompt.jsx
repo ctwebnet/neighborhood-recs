@@ -10,7 +10,7 @@ export default function CategorySearchAndPrompt({
   const [customCategory, setCustomCategory] = useState("");
   const [showInlineForm, setShowInlineForm] = useState(false);
 const [requestText, setRequestText] = useState("");
-
+const [showSuggestions, setShowSuggestions] = useState(false);
   const effectiveCategory =
     selectedCategory === "__custom" ? customCategory : selectedCategory;
 
@@ -31,19 +31,46 @@ const [requestText, setRequestText] = useState("");
   return (
     <div className="bg-white p-4 rounded shadow mb-6">
       <h2 className="text-xl font-semibold mb-2">Search and ask for Recommendations by Category</h2>
-      <select
-        className="w-full border p-2 mb-2"
-        value={selectedCategory}
-        onChange={(e) => setSelectedCategory(e.target.value)}
+      <input
+  className="w-full border p-2 mb-1"
+  placeholder="Start typing a category..."
+  value={selectedCategory}
+  onChange={(e) => {
+    setSelectedCategory(e.target.value);
+    setCustomCategory(""); // Reset custom if typing
+  }}
+  onFocus={() => setShowSuggestions(true)}
+  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // Delay to allow click
+/>
+
+{selectedCategory && showSuggestions && (
+  <ul className="border border-gray-300 rounded bg-white max-h-40 overflow-y-auto mt-1 text-sm">
+    {serviceTypes
+      .filter((type) =>
+        type.toLowerCase().includes(selectedCategory.toLowerCase())
+      )
+      .slice(0, 8)
+      .map((match) => (
+        <li
+          key={match}
+          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+          onClick={() => setSelectedCategory(match)}
+        >
+          {match}
+        </li>
+      ))}
+    {!serviceTypes.some(
+      (type) => type.toLowerCase() === selectedCategory.toLowerCase()
+    ) && (
+      <li
+        className="px-4 py-2 text-gray-500 italic"
+        onClick={() => setSelectedCategory(selectedCategory)}
       >
-        <option value="">Select a category</option>
-        {serviceTypes.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-        <option value="__custom">Other (Add a new category)</option>
-      </select>
+        Use “{selectedCategory}” as a new category
+      </li>
+    )}
+  </ul>
+)}
 
       {selectedCategory === "__custom" && (
         <input

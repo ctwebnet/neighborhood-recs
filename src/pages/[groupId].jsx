@@ -25,6 +25,7 @@ import {
 import { db, auth } from "../firebase";
 import StandaloneRecForm from "../components/StandaloneRecForm";
 import CategorySearchAndPrompt from "../components/CategorySearchAndPrompt";
+import Request from "../components/Request";
 
 export default function GroupPage() {
   const { groupId } = useParams();
@@ -385,170 +386,32 @@ export default function GroupPage() {
             </button>
           </div>*/}
           {/* Requests & Replies */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-2">Recent Requests for Recommendations</h2>
-            {requests.length === 0 ? (
-              <p className="text-gray-500 italic">No requests yet.</p>
-            ) : (
-              requests.map((req) => {
-                const directRecs = recommendations.filter(
-                  (rec) => rec.linkedRequestId === req.id
-                );
-                const matchedRecs = getMatchingRecs(req);
-
-                return (
-                  <div key={req.id} className="bg-white p-4 rounded shadow mb-6">
-                    <p className="font-medium">{req.text}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Submitted by {req.submittedBy?.name || "unknown"}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-2">
-                      Category: {req.serviceType}
-                    </p>
-                    <p className="font-medium">
-                      <a
-                        href={`/request/${req.id}`}
-                        className="ml-2 text-blue-600 underline text-sm"
-                      >
-                        View Full Request →
-                      </a>
-                    </p>
-
-                    {/* Direct Replies */}
-                    {directRecs.length > 0 && (
-                      <>
-                        <h4 className="mt-4 font-semibold">Replies</h4>
-                        {directRecs.map((rec) => (
-                          <div key={rec.id} className="border border-gray-200 rounded p-2 bg-gray-50 mt-2">
-                            <p className="font-semibold">{rec.name}</p>
-                            <p className="text-sm text-gray-500">{rec.serviceType}</p>
-                            <p>{rec.testimonial}</p>
-                            <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-                            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-  –{" "}
-  {rec.submittedByUid ? (
-    <Link
-      to={`/users/${rec.submittedByUid}`}
-      className="text-blue-600 underline hover:text-blue-800"
-    >
-      {rec.submittedBy?.name || "unknown"}
-    </Link>
+<div className="mb-8">
+  <h2 className="text-xl font-semibold mb-2">Recent Requests for Recommendations</h2>
+  {requests.length === 0 ? (
+    <p className="text-gray-500 italic">No requests yet.</p>
   ) : (
-    rec.submittedBy?.name || "unknown"
-  )}
-</p>
-                          </div>
-                        ))}
-                      </>
-                    )}
+    requests.map((req) => {
+      const directRecs = recommendations.filter(
+        (rec) => rec.linkedRequestId === req.id
+      );
+      const matchedRecs = getMatchingRecs(req);
 
-                    {/* Matched Recommendations */}
-                    {matchedRecs.length > 0 && (
-                      <>
-                        <h4 className="mt-4 font-semibold text-gray-700">
-                          Other recommendations that might help
-                        </h4>
-                        {matchedRecs.map((rec) => (
-                          <div key={rec.id} className="border border-dashed border-gray-300 rounded p-2 bg-gray-50 mt-2">
-                            <p className="font-semibold">{rec.name}</p>
-                            <p className="text-sm text-gray-500">{rec.serviceType}</p>
-                            <p>{rec.testimonial}</p>
-                            <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-                            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-  –{" "}
-  {rec.submittedByUid ? (
-    <Link
-      to={`/users/${rec.submittedByUid}`}
-      className="text-blue-600 underline hover:text-blue-800"
-    >
-      {rec.submittedBy?.name || "unknown"}
-    </Link>
-  ) : (
-    rec.submittedBy?.name || "unknown"
+      return (
+        <Request
+          key={req.id}
+          request={req}
+          directRecs={directRecs}
+          matchedRecs={matchedRecs}
+          newReplies={newReplies}
+          setNewReplies={setNewReplies}
+          handleReplySubmit={handleReplySubmit}
+          serviceTypes={serviceTypes}
+        />
+      );
+    })
   )}
-</p>
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {/* Reply Form */}
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-1">Add a Recommendation</h4>
-                      <input
-                        className="w-full border p-2 mb-2"
-                        placeholder="Who are you recommending?"
-                        value={newReplies[req.id]?.name || ""}
-                        onChange={(e) =>
-                          setNewReplies((prev) => ({
-                            ...prev,
-                            [req.id]: {
-                              ...prev[req.id],
-                              name: e.target.value,
-                            },
-                          }))
-                        }
-                      />
-                      <select
-                        className="w-full border p-2 mb-2"
-                        value={newReplies[req.id]?.serviceType || ""}
-                        onChange={(e) =>
-                          setNewReplies((prev) => ({
-                            ...prev,
-                            [req.id]: {
-                              ...prev[req.id],
-                              serviceType: e.target.value,
-                            },
-                          }))
-                        }
-                      >
-                        <option value="">Select a service type</option>
-                        {serviceTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                      <textarea
-                        className="w-full border p-2 mb-2"
-                        placeholder="What did they do for you, and how was the experience?"
-                        value={newReplies[req.id]?.testimonial || ""}
-                        onChange={(e) =>
-                          setNewReplies((prev) => ({
-                            ...prev,
-                            [req.id]: {
-                              ...prev[req.id],
-                              testimonial: e.target.value,
-                            },
-                          }))
-                        }
-                      />
-                      <input
-                        className="w-full border p-2 mb-2"
-                        placeholder="Phone, email, website, or other way to reach them"
-                        value={newReplies[req.id]?.contactInfo || ""}
-                        onChange={(e) =>
-                          setNewReplies((prev) => ({
-                            ...prev,
-                            [req.id]: {
-                              ...prev[req.id],
-                              contactInfo: e.target.value,
-                            },
-                          }))
-                        }
-                      />
-                      <button
-                        onClick={() => handleReplySubmit(req.id)}
-                        className="btn-primary"
-                      >
-                        Submit Recommendation
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+</div>
         </div>
       </div>
       <Footer user={user} />

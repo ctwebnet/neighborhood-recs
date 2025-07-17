@@ -14,7 +14,14 @@ const Request = ({
   return (
 
     <div className="bg-white p-4 rounded shadow mb-6">
-      <p className="font-medium">{request.text}</p>
+      <p className="font-medium">
+  <Link
+    to={`/request/${request.id}`}
+    className="text-blue-600 underline hover:text-blue-800"
+  >
+    {request.text}
+  </Link>
+</p>
       <p className="text-sm text-gray-500 mt-1">
         Submitted by {request.submittedBy?.name || 'unknown'}
       </p>
