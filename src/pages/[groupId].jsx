@@ -407,6 +407,7 @@ export default function GroupPage() {
           setNewReplies={setNewReplies}
           handleReplySubmit={handleReplySubmit}
           serviceTypes={serviceTypes}
+          user={user} // ✅ required for ThankButton
         />
       );
     })

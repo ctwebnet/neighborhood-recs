@@ -1,6 +1,7 @@
 // src/components/Request.jsx
 import React from 'react';
 import { Link } from "react-router-dom";
+import ThankButton from "./ThankButton";
 
 const Request = ({
   request,
@@ -9,7 +10,8 @@ const Request = ({
   newReplies,
   setNewReplies,
   handleReplySubmit,
-  serviceTypes
+  serviceTypes,
+  user, // ✅ include here
 }) => {
   return (
 
@@ -34,29 +36,32 @@ const Request = ({
         <>
           <h4 className="mt-4 font-semibold">Replies</h4>
           {directRecs.map((rec) => (
-            <div
-              key={rec.id}
-              className="border border-gray-200 rounded p-2 bg-gray-50 mt-2"
-            >
-              <p className="font-semibold">{rec.name}</p>
-              <p className="text-sm text-gray-500">{rec.serviceType}</p>
-              <p>{rec.testimonial}</p>
-              <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-              <p className="text-xs text-gray-400 mt-1">
-  –{" "}
-  {rec.submittedByUid ? (
+  <div key={rec.id} className="border border-gray-200 rounded p-2 bg-gray-50 mt-2">
     <Link
-      to={`/users/${rec.submittedByUid}`}
-      className="text-blue-600 underline hover:text-blue-800"
+      to={`/recommendations/${rec.id}`}
+      className="font-semibold text-blue-700 underline block mb-1"
     >
-      {rec.submittedBy?.name || "unknown"}
+      {rec.name}
     </Link>
-  ) : (
-    rec.submittedBy?.name || "unknown"
-  )}
-</p>
-            </div>
-          ))}
+    <p className="text-sm text-gray-500">{rec.serviceType}</p>
+    <p>{rec.testimonial}</p>
+    <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
+    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+      –{" "}
+      {rec.submittedByUid ? (
+        <Link
+          to={`/users/${rec.submittedByUid}`}
+          className="text-blue-600 underline hover:text-blue-800"
+        >
+          {rec.submittedBy?.name || "unknown"}
+        </Link>
+      ) : (
+        rec.submittedBy?.name || "unknown"
+      )}
+    </p>
+    <ThankButton recId={rec.id} user={user} />
+  </div>
+))}
         </>
       )}
 
@@ -67,29 +72,32 @@ const Request = ({
             Other recommendations that might help
           </h4>
           {matchedRecs.map((rec) => (
-            <div
-              key={rec.id}
-              className="border border-dashed border-gray-300 rounded p-2 bg-gray-50 mt-2"
-            >
-              <p className="font-semibold">{rec.name}</p>
-              <p className="text-sm text-gray-500">{rec.serviceType}</p>
-              <p>{rec.testimonial}</p>
-              <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
-              <p className="text-xs text-gray-400 mt-1">
-  –{" "}
-  {rec.submittedByUid ? (
+  <div key={rec.id} className="border border-dashed border-gray-300 rounded p-2 bg-gray-50 mt-2">
     <Link
-      to={`/users/${rec.submittedByUid}`}
-      className="text-blue-600 underline hover:text-blue-800"
+      to={`/recommendations/${rec.id}`}
+      className="font-semibold text-blue-700 underline block mb-1"
     >
-      {rec.submittedBy?.name || "unknown"}
+      {rec.name}
     </Link>
-  ) : (
-    rec.submittedBy?.name || "unknown"
-  )}
-</p>
-            </div>
-          ))}
+    <p className="text-sm text-gray-500">{rec.serviceType}</p>
+    <p>{rec.testimonial}</p>
+    <p className="text-sm text-gray-500 italic">{rec.contactInfo}</p>
+    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+      –{" "}
+      {rec.submittedByUid ? (
+        <Link
+          to={`/users/${rec.submittedByUid}`}
+          className="text-blue-600 underline hover:text-blue-800"
+        >
+          {rec.submittedBy?.name || "unknown"}
+        </Link>
+      ) : (
+        rec.submittedBy?.name || "unknown"
+      )}
+    </p>
+    <ThankButton recId={rec.id} user={user} />
+  </div>
+))}
         </>
       )}
 
