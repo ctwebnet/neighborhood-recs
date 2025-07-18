@@ -11,6 +11,7 @@ export default function SettingsPage() {
   const [emailOptOut, setEmailOptOut] = useState(false);
   const [replyEmailOptOut, setReplyEmailOptOut] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [thankYouEmailOptOut, setThankYouEmailOptOut] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -28,6 +29,7 @@ export default function SettingsPage() {
         const data = userSnap.data();
         setEmailOptOut(data.emailOptOut || false);
         setReplyEmailOptOut(data.replyEmailOptOut || false);
+        setThankYouEmailOptOut(data.thankYouEmailOptOut || false);
       }
 
       setLoading(false);
@@ -62,6 +64,16 @@ export default function SettingsPage() {
         : "You’ll be notified when someone replies to your request!"
     );
   };
+  const handleToggleThankYouEmails = async () => {
+  const newValue = !thankYouEmailOptOut;
+  setThankYouEmailOptOut(newValue);
+  await updateSetting("thankYouEmailOptOut", newValue);
+  toast.success(
+    newValue
+      ? "You won’t get emails when someone thanks your recommendation."
+      : "You’ll be notified when someone thanks your recommendation!"
+  );
+};
 
   if (loading) {
     return (
@@ -126,6 +138,18 @@ export default function SettingsPage() {
               <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all"></div>
             </label>
           </div>
+          <div className="flex items-center justify-between border-b py-3">
+  <span>Email me when someone thanks my recommendation</span>
+  <label className="inline-flex items-center cursor-pointer">
+    <input
+      type="checkbox"
+      checked={!thankYouEmailOptOut}
+      onChange={handleToggleThankYouEmails}
+      className="sr-only peer"
+    />
+    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all"></div>
+  </label>
+</div>
         </div>
       </div>
       <Footer user={user} />
