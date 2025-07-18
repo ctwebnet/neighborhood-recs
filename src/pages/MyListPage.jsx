@@ -115,7 +115,7 @@ const MyListPage = () => {
         <div className="min-h-screen bg-gray-100 p-6">
           <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Your Recommendations</h2>
+              <h2 className="text-2xl font-bold">My List</h2>
               <button
                 onClick={() => {
                   const shareUrl = `${window.location.origin}/users/${user.uid}`;
@@ -179,7 +179,21 @@ const MyListPage = () => {
                       <div key={rec.id} className="mb-4">
                         <p className="font-semibold">{rec.name}</p>
                         <p className="text-sm text-gray-500">{rec.contactInfo}</p>
-                        <p className="mt-1">{rec.testimonial}</p>
+                        <p className="mt-1">
+  {rec.testimonial.length > 250 ? (
+    <>
+      {rec.testimonial.slice(0, 125)}...
+      <a
+        href={`/recommendations/${rec.id}`}
+        className="text-blue-600 underline ml-1"
+      >
+        View full
+      </a>
+    </>
+  ) : (
+    rec.testimonial
+  )}
+</p>
                         <p className="text-xs text-gray-400 mt-1">Group: {rec.groupId}</p>
                         <div className="flex gap-2 mt-2">
                           <button className="bg-black text-white px-3 py-1 text-sm rounded" onClick={() => startEditing(rec)}>
