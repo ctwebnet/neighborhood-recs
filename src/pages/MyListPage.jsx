@@ -15,6 +15,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import StandaloneRecForm from "../components/StandaloneRecForm";
 import { Toaster, toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 const MyListPage = () => {
   const [user, setUser] = useState(null);
@@ -27,7 +28,7 @@ const MyListPage = () => {
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [loading, setLoading] = useState(true);
   const [addingNewCategory, setAddingNewCategory] = useState(false);
-
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -90,6 +91,13 @@ const MyListPage = () => {
   const filledTypes = recommendations.map((r) => r.serviceType);
   const totalFilled = new Set(filledTypes).size;
 
+  const filteredServiceTypes = allServiceTypes.filter((type) =>
+    type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filledCategories = filteredServiceTypes.filter((type) => filledTypes.includes(type));
+  const unfilledCategories = filteredServiceTypes.filter((type) => !filledTypes.includes(type));
+
   return (
     <>
       <Header />
@@ -114,7 +122,7 @@ const MyListPage = () => {
                   navigator.clipboard.writeText(shareUrl);
                   toast.success("Link copied!");
                 }}
-                className="btn-primary"
+                className="bg-green-600 text-white px-4 py-2 rounded text-sm"
               >
                 Share Your List
               </button>
@@ -124,26 +132,20 @@ const MyListPage = () => {
               You've submitted {recommendations.length} recommendations in {totalFilled} of {allServiceTypes.length} categories.
             </p>
 
-            {allServiceTypes.map((type) => {
+            <input
+              type="text"
+              placeholder="Search categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full border p-2 mb-6 rounded"
+            />
+
+            {filledCategories.map((type) => {
               const recsInType = recommendations.filter((r) => r.serviceType === type);
               return (
-                <div
-                  key={type}
-                  className="border border-gray-200 rounded p-4 mb-4 bg-gray-50"
-                >
+                <div key={type} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-semibold">{type}</h3>
-                    {recsInType.length > 0 ? null : (
-                      <button
-                        className="text-green-600 hover:text-green-800 text-sm font-medium"
-                        onClick={() => {
-                          setAddingCategory(type);
-                          setEditingId(null);
-                        }}
-                      >
-                        + Add
-                      </button>
-                    )}
                   </div>
 
                   {recsInType.map((rec) => (
@@ -152,29 +154,20 @@ const MyListPage = () => {
                         <input
                           className="w-full border p-1 mb-2"
                           value={editedData.name}
-                          onChange={(e) =>
-                            setEditedData({ ...editedData, name: e.target.value })
-                          }
+                          onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
                         />
                         <textarea
                           className="w-full border p-1 mb-2"
                           value={editedData.testimonial}
-                          onChange={(e) =>
-                            setEditedData({ ...editedData, testimonial: e.target.value })
-                          }
+                          onChange={(e) => setEditedData({ ...editedData, testimonial: e.target.value })}
                         />
                         <input
                           className="w-full border p-1 mb-2"
                           value={editedData.contactInfo}
-                          onChange={(e) =>
-                            setEditedData({ ...editedData, contactInfo: e.target.value })
-                          }
+                          onChange={(e) => setEditedData({ ...editedData, contactInfo: e.target.value })}
                         />
                         <div className="flex gap-2">
-                          <button
-                            className="btn-primary"
-                            onClick={() => saveChanges(rec.id)}
-                          >
+                          <button className="bg-black text-white px-4 py-2 rounded text-sm" onClick={() => saveChanges(rec.id)}>
                             Save
                           </button>
                           <button className="btn-secondary" onClick={cancelEditing}>
@@ -188,104 +181,129 @@ const MyListPage = () => {
                         <p className="text-sm text-gray-500">{rec.contactInfo}</p>
                         <p className="mt-1">{rec.testimonial}</p>
                         <p className="text-xs text-gray-400 mt-1">Group: {rec.groupId}</p>
-                        <button
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-1"
-                          onClick={() => startEditing(rec)}
-                        >
-                          Edit
-                        </button>
+                        <div className="flex gap-2 mt-2">
+                          <button className="bg-black text-white px-3 py-1 text-sm rounded" onClick={() => startEditing(rec)}>
+                            Edit
+                          </button>
+                          <button
+                            className="bg-green-600 text-white px-3 py-1 text-sm rounded"
+                            onClick={() => {
+                              const url = `${window.location.origin}/recommendations/${rec.id}`;
+                              navigator.clipboard.writeText(url);
+                              toast.success("Link to this recommendation copied!");
+                            }}
+                          >
+                            Share
+                          </button>
+                        </div>
                       </div>
                     )
                   ))}
-
-
-                  {addingCategory === type && (
-                    <>
-                      {userGroups.length > 1 && (
-                        <div className="mb-4">
-                          <label
-                            htmlFor="group-select"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Select group
-                          </label>
-                          <select
-                            id="group-select"
-                            value={selectedGroupId}
-                            onChange={(e) => setSelectedGroupId(e.target.value)}
-                            className="w-full border p-2 rounded"
-                          >
-                            {userGroups.map((groupId) => (
-                              <option key={groupId} value={groupId}>
-                                {groupId}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      <StandaloneRecForm
-                        groupId={selectedGroupId || userGroups[0]}
-                        user={user}
-                        defaultServiceType={type}
-                        serviceTypeOptions={allServiceTypes}
-                        onDone={() => setAddingCategory(null)}
-                      />
-                    </>
-                  )}
                 </div>
               );
             })}
-<div className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
-  <div className="flex justify-between items-center mb-2">
-    <h3 className="font-semibold">New Category</h3>
-    {!addingNewCategory && (
-      <button
-        className="text-green-600 hover:text-green-800 text-sm font-medium"
-        onClick={() => {
-          setAddingCategory(null); // clear any other add state
-          setEditingId(null);     // clear any editing
-          setAddingNewCategory(true);
-        }}
-      >
-        + Add
-      </button>
-    )}
-  </div>
 
-  {addingNewCategory && (
-    <>
-      {userGroups.length > 1 && (
-        <div className="mb-4">
-          <label
-            htmlFor="group-select-new"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Select group
-          </label>
-          <select
-            id="group-select-new"
-            value={selectedGroupId}
-            onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="w-full border p-2 rounded"
-          >
-            {userGroups.map((groupId) => (
-              <option key={groupId} value={groupId}>
-                {groupId}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      <StandaloneRecForm
-        groupId={selectedGroupId || userGroups[0]}
-        user={user}
-        serviceTypeOptions={allServiceTypes}
-        allowCustomServiceType={true}
-        onDone={() => setAddingNewCategory(false)}
-      />
-    </>
-  )}
-</div>
+            {unfilledCategories.length > 0 && (
+              <div className="mt-10">
+                <h3 className="text-lg font-semibold mb-4">Categories you haven’t filled out yet</h3>
+                {unfilledCategories.map((type) => (
+                  <div key={type} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-semibold">{type}</h3>
+                      <button
+                        className="text-green-600 hover:text-green-800 text-sm font-medium"
+                        onClick={() => {
+                          setAddingCategory(type);
+                          setEditingId(null);
+                          setAddingNewCategory(false);
+                        }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+
+                    {addingCategory === type && (
+                      <>
+                        {userGroups.length > 1 && (
+                          <div className="mb-4">
+                            <label htmlFor="group-select" className="block text-sm font-medium text-gray-700 mb-1">
+                              Select group
+                            </label>
+                            <select
+                              id="group-select"
+                              value={selectedGroupId}
+                              onChange={(e) => setSelectedGroupId(e.target.value)}
+                              className="w-full border p-2 rounded"
+                            >
+                              {userGroups.map((groupId) => (
+                                <option key={groupId} value={groupId}>
+                                  {groupId}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <StandaloneRecForm
+                          groupId={selectedGroupId || userGroups[0]}
+                          user={user}
+                          defaultServiceType={type}
+                          serviceTypeOptions={allServiceTypes}
+                          onDone={() => setAddingCategory(null)}
+                        />
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold">New Category</h3>
+                {!addingNewCategory && (
+                  <button
+                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                    onClick={() => {
+                      setAddingCategory(null);
+                      setEditingId(null);
+                      setAddingNewCategory(true);
+                    }}
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+              {addingNewCategory && (
+                <>
+                  {userGroups.length > 1 && (
+                    <div className="mb-4">
+                      <label htmlFor="group-select-new" className="block text-sm font-medium text-gray-700 mb-1">
+                        Select group
+                      </label>
+                      <select
+                        id="group-select-new"
+                        value={selectedGroupId}
+                        onChange={(e) => setSelectedGroupId(e.target.value)}
+                        className="w-full border p-2 rounded"
+                      >
+                        {userGroups.map((groupId) => (
+                          <option key={groupId} value={groupId}>
+                            {groupId}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <StandaloneRecForm
+                    groupId={selectedGroupId || userGroups[0]}
+                    user={user}
+                    serviceTypeOptions={allServiceTypes}
+                    allowCustomServiceType={true}
+                    onDone={() => setAddingNewCategory(false)}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
