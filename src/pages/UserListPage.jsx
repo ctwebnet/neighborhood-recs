@@ -12,6 +12,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import ThankButton from "../components/ThankButton";
 import { Toaster, toast } from "react-hot-toast";
 
 const UserListPage = () => {
@@ -106,7 +107,7 @@ const UserListPage = () => {
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
           <h2 className="text-2xl font-bold mb-4">
-            Recommendations by {targetUser.firstName || targetUser.email}
+            {targetUser.firstName ? `${targetUser.firstName}'s List` : `Recommendations by ${targetUser.email}`}
           </h2>
           {recommendations.length === 0 ? (
             <p className="text-gray-600">No recommendations found.</p>
@@ -114,25 +115,26 @@ const UserListPage = () => {
             recommendations.map((rec) => (
               <div key={rec.id} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
                 <div className="flex justify-between items-start">
-  <div>
-    <p className="font-semibold">{rec.name}</p>
-    <p className="text-sm text-gray-500">{rec.serviceType}</p>
-  </div>
-  <button
-    onClick={() => {
-      navigator.clipboard.writeText(
-        `${window.location.origin}/recommendations/${rec.id}`
-      );
-      toast.success("Link copied to clipboard");
-    }}
-    className="bg-green-500 hover:bg-green-600 text-white font-semibold text-sm py-1 px-3 rounded"
-  >
-    Share
-  </button>
-</div>
+                  <div>
+                    <p className="font-semibold">{rec.name}</p>
+                    <p className="text-sm text-gray-500">{rec.serviceType}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/recommendations/${rec.id}`
+                      );
+                      toast.success("Link copied to clipboard");
+                    }}
+                    className="bg-green-500 hover:bg-green-600 text-white font-semibold text-sm py-1 px-3 rounded"
+                  >
+                    Share
+                  </button>
+                </div>
                 <p className="mt-1">{rec.testimonial}</p>
                 <p className="text-sm text-gray-500 italic mt-1">{rec.contactInfo}</p>
                 <p className="text-xs text-gray-400 mt-2">Group: {rec.groupId}</p>
+                <ThankButton recId={rec.id} user={currentUser} />
               </div>
             ))
           )}
