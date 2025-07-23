@@ -81,24 +81,41 @@ setThanksCount(Object.keys(thanks).length);
       const userSnap = await getDoc(userRef);
       let wasNewToGroup = false;
 
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        if (userData.groupIds?.includes(groupId)) {
-          setHasGroupAccess(true);
-        } else {
-          await setDoc(userRef, {
-            ...userData,
-            groupIds: [...(userData.groupIds || []), groupId],
-          });
-          setHasGroupAccess(true);
-          wasNewToGroup = true;
-        }
-      } else {
+           if (userSnap.exists()) {
+  const userData = userSnap.data();
+  const updatedUser = {
+    ...userData,
+    groupIds: userData.groupIds?.includes(groupId)
+      ? userData.groupIds
+      : [...(userData.groupIds || []), groupId],
+  };
+
+  if (!userData.createdAt) {
+    updatedUser.createdAt = new Date();
+  }
+
+  if (!userData.userNumber) {
+    const usersSnap = await getDocs(collection(db, "users"));
+    updatedUser.userNumber = usersSnap.size;
+  }
+
+  if (updatedUser.groupIds.length !== userData.groupIds?.length) {
+    wasNewToGroup = true;
+  }
+
+  await setDoc(userRef, updatedUser);
+  setHasGroupAccess(true);
+} else {
+        const usersSnap = await getDocs(collection(db, "users"));
+        const newUserNumber = usersSnap.size;
+
         await setDoc(userRef, {
           email: user.email,
           firstName: user.displayName?.split(" ")[0] || "",
           lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
           groupIds: [groupId],
+          userNumber: newUserNumber,
+          createdAt: new Date(),
         });
         setHasGroupAccess(true);
         wasNewToGroup = true;
