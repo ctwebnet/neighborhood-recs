@@ -116,6 +116,7 @@ const UserListPage = () => {
              <div key={rec.id} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
     <div className="mb-2 sm:mb-0">
+    <p className="font-semibold text-base">{rec.name}</p>
       <p className="text-sm text-gray-500 mb-1">{rec.serviceType}</p>
       <p className="text-xs text-gray-400">
         Group:{" "}
