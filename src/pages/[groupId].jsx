@@ -63,31 +63,46 @@ export default function GroupPage() {
     }
 
     if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        email: currentUser.email,
-        firstName,
-        lastName,
-        groupIds: [groupId],
-      });
-      setHasGroupAccess(true);
-    } else {
-      const userData = userSnap.data();
-      if (!userData.groupIds) {
-        await setDoc(userRef, {
-          ...userData,
-          groupIds: [groupId],
-        });
-        setHasGroupAccess(true);
-      } else if (!userData.groupIds.includes(groupId)) {
-        await setDoc(userRef, {
-          ...userData,
-          groupIds: [...userData.groupIds, groupId],
-        });
-        setHasGroupAccess(true);
-      } else {
-        setHasGroupAccess(true);
-      }
-    }
+  // 🆕 Count how many users exist to assign userNumber
+  const allUsersSnap = await getDocs(collection(db, "users"));
+  const userNumber = allUsersSnap.size >= 0 ? allUsersSnap.size : 0;
+
+  await setDoc(userRef, {
+    email: currentUser.email,
+    firstName,
+    lastName,
+    groupIds: [groupId],
+    userNumber,
+    createdAt: serverTimestamp(),
+  });
+  setHasGroupAccess(true);
+} else {
+  const userData = userSnap.data();
+
+  // 🧠 Only set userNumber and createdAt if they’re missing
+  const updatedData = { ...userData };
+
+  if (!userData.userNumber) {
+    const allUsersSnap = await getDocs(collection(db, "users"));
+    updatedData.userNumber = allUsersSnap.size;
+  }
+
+  if (!userData.createdAt) {
+    updatedData.createdAt = serverTimestamp();
+  }
+
+  if (!userData.groupIds) {
+    updatedData.groupIds = [groupId];
+    setHasGroupAccess(true);
+  } else if (!userData.groupIds.includes(groupId)) {
+    updatedData.groupIds = [...userData.groupIds, groupId];
+    setHasGroupAccess(true);
+  } else {
+    setHasGroupAccess(true);
+  }
+
+  await setDoc(userRef, updatedData);
+}
 
     // Always check group index and count once user is valid
     try {
