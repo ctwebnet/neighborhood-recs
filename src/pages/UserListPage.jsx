@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
   collection,
   query,
@@ -113,29 +113,34 @@ const UserListPage = () => {
             <p className="text-gray-600">No recommendations found.</p>
           ) : (
             recommendations.map((rec) => (
-              <div key={rec.id} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold">{rec.name}</p>
-                    <p className="text-sm text-gray-500">{rec.serviceType}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `${window.location.origin}/recommendations/${rec.id}`
-                      );
-                      toast.success("Link copied to clipboard");
-                    }}
-                    className="bg-green-500 hover:bg-green-600 text-white font-semibold text-sm py-1 px-3 rounded"
-                  >
-                    Share
-                  </button>
-                </div>
-                <p className="mt-1">{rec.testimonial}</p>
-                <p className="text-sm text-gray-500 italic mt-1">{rec.contactInfo}</p>
-                <p className="text-xs text-gray-400 mt-2">Group: {rec.groupId}</p>
-                <ThankButton recId={rec.id} user={currentUser} />
-              </div>
+             <div key={rec.id} className="border border-gray-200 rounded p-4 mb-4 bg-gray-50">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="mb-2 sm:mb-0">
+      <p className="text-sm text-gray-500 mb-1">{rec.serviceType}</p>
+      <p className="text-xs text-gray-400">
+        Group:{" "}
+        {typeof rec.groupId === "string" ? (
+          <Link
+            to={`/${rec.groupId}`}
+            className="text-blue-600 underline"
+          >
+            {rec.groupId.charAt(0).toUpperCase() + rec.groupId.slice(1)}
+          </Link>
+        ) : (
+          <span className="text-gray-500 italic">General Recommendation</span>
+        )}
+      </p>
+    </div>
+    <div className="flex-shrink-0">
+      <Link
+        to={`/recommendations/${rec.id}`}
+        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded block text-center"
+      >
+        View Recommendation
+      </Link>
+    </div>
+  </div>
+</div>
             ))
           )}
         </div>
