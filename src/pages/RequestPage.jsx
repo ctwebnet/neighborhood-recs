@@ -73,24 +73,38 @@ const RequestPage = () => {
 
       let wasNewToGroup = false;
 
-      if (userSnap.exists()) {
+            if (userSnap.exists()) {
         const userData = userSnap.data();
-        if (userData.groupIds?.includes(groupId)) {
-          setHasGroupAccess(true);
-        } else {
-          await setDoc(userRef, {
-            ...userData,
-            groupIds: [...(userData.groupIds || []), groupId],
-          });
-          setHasGroupAccess(true);
-          wasNewToGroup = true;
+        const updatedUser = {
+          ...userData,
+          groupIds: userData.groupIds?.includes(groupId)
+            ? userData.groupIds
+            : [...(userData.groupIds || []), groupId],
+          createdAt: userData.createdAt || new Date(),
+          userNumber: userData.userNumber ?? (await getDocs(collection(db, "users"))).size,
+        };
+
+        if (
+          !userData.groupIds?.includes(groupId) ||
+          userData.userNumber === undefined ||
+          userData.createdAt === undefined
+        ) {
+          await setDoc(userRef, updatedUser);
         }
+
+        setHasGroupAccess(true);
+        wasNewToGroup = !userData.groupIds?.includes(groupId);
       } else {
+        const usersSnap = await getDocs(collection(db, "users"));
+        const newUserNumber = usersSnap.size;
+
         await setDoc(userRef, {
           email: user.email,
           firstName: user.displayName?.split(" ")[0] || "",
           lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
           groupIds: [groupId],
+          userNumber: newUserNumber,
+          createdAt: new Date(),
         });
         setHasGroupAccess(true);
         wasNewToGroup = true;
