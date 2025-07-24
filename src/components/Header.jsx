@@ -36,7 +36,7 @@ export default function Header() {
         <div className="text-center">
           <Link to="/" className="text-3xl font-bold text-black">
             neighboroonie{" "}
-            <span className="text-xs font-normal text-gray-500">beta v0.1</span>
+            <span className="text-xs font-normal text-gray-500">beta v0.2</span>
           </Link>
           <p className="text-gray-600 text-sm mt-1">
             A simple way to share and find trusted local recommendations.
