@@ -496,9 +496,21 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
         case "request":
           return (
             <div key={`request-${item.id}`} className="bg-white border p-4 mb-4 rounded">
-              <p className="text-sm text-gray-600">🛠️ A neighbor asked:</p>
+              <p className="text-sm text-gray-600">
+                🛠️{" "}
+                <Link
+                  to={`/users/${item.submittedByUid}`}
+                  className="text-blue-600 underline"
+                >
+                  {item.submittedBy?.name || "A neighbor"}
+                </Link>{" "}
+                asked:
+              </p>
               <p className="font-semibold mb-2">{item.text}</p>
-              <Link to={`/request/${item.id}`} className="text-blue-600 underline text-sm">
+              <Link
+                to={`/request/${item.id}`}
+                className="text-blue-600 underline text-sm"
+              >
                 View Request →
               </Link>
             </div>
@@ -507,10 +519,22 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
         case "recommendation":
           return (
             <div key={`rec-${item.id}`} className="bg-gray-50 border p-4 mb-4 rounded">
-              <p className="text-sm text-gray-600">✅ A neighbor recommended:</p>
+              <p className="text-sm text-gray-600">
+                ✅{" "}
+                <Link
+                  to={`/users/${item.submittedByUid}`}
+                  className="text-blue-600 underline"
+                >
+                  {item.submittedBy?.name || "A neighbor"}
+                </Link>{" "}
+                recommended:
+              </p>
               <p className="font-semibold">{item.name}</p>
               <p className="text-sm text-gray-500 mb-2">for {item.serviceType}</p>
-              <Link to={`/recommendations/${item.id}`} className="text-blue-600 underline text-sm">
+              <Link
+                to={`/recommendations/${item.id}`}
+                className="text-blue-600 underline text-sm"
+              >
                 View Recommendation →
               </Link>
             </div>
@@ -518,8 +542,12 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
 
         case "user_joined":
           return (
-            <div key={`user-${item.id}`} className="bg-white border p-4 mb-4 rounded text-sm text-gray-500 italic">
-              <span className="text-2xl mr-2">🦩</span>{item.firstName || item.email} just joined the group.
+            <div
+              key={`user-${item.id}`}
+              className="bg-white border p-4 mb-4 rounded text-sm text-gray-500 italic"
+            >
+              <span className="text-2xl mr-2">🦩</span>
+              {item.firstName || item.email} just joined the group.
             </div>
           );
 
