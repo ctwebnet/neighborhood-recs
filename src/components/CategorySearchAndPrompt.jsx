@@ -29,20 +29,36 @@ const [showSuggestions, setShowSuggestions] = useState(false);
   }, [matchingRecs]);
 
   return (
-    <div className="bg-white p-4 rounded shadow mb-6">
-      <h2 className="text-xl font-semibold mb-2">Search and ask for Recommendations by Category</h2>
-      <input
-  className="w-full border p-2 mb-1"
-  placeholder="Start typing a category..."
-  value={selectedCategory}
-  onChange={(e) => {
-    setSelectedCategory(e.target.value);
-    setCustomCategory(""); // Reset custom if typing
-  }}
-  onFocus={() => setShowSuggestions(true)}
-  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // Delay to allow click
-/>
+    <div className="bg-blue-50 border border-blue-300 rounded p-4 mb-6">
+  <div className="flex justify-between items-center mb-4">
+    <div>
+      <h2 className="text-base text-gray-700 font-semibold mb-1">
+    Neighboroonie grows here when you plant your request.
+  </h2>
+  <p className="text-base text-gray-700">
+    <strong>Search</strong> existing recommendations and <strong>ask</strong> for new ones.
+  </p>
+    </div>
+    <img
+      src="/android-chrome-512x512.png"
+      alt="Neighboroonie logo"
+      className="w-12 h-12 sm:w-14 sm:h-14 ml-4 flex-shrink-0"
+    />
+  </div>
 
+  <div className="flex items-center gap-2">
+    <input
+      className="flex-grow border p-2"
+      placeholder="Start typing a category like plumber or interior designer..."
+      value={selectedCategory}
+      onChange={(e) => {
+        setSelectedCategory(e.target.value);
+        setCustomCategory("");
+      }}
+      onFocus={() => setShowSuggestions(true)}
+      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+    />
+  </div>
 {selectedCategory && showSuggestions && (
   <ul className="border border-gray-300 rounded bg-white max-h-40 overflow-y-auto mt-1 text-sm">
     {serviceTypes
