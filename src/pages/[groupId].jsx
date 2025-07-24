@@ -43,6 +43,8 @@ export default function GroupPage() {
   const [newReplies, setNewReplies] = useState({});
   const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showRecForm, setShowRecForm] = useState(false); 
+  const [feedItems, setFeedItems] = useState([]);
 
   useEffect(() => {
   const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -139,40 +141,59 @@ export default function GroupPage() {
   }, [groupId]);
 
   useEffect(() => {
-    if (!user || !groupExists || !hasGroupAccess) return;
+  if (!user || !groupExists || !hasGroupAccess) return;
 
-    const reqQuery = query(
-      collection(db, "requests"),
-      where("groupId", "==", groupId),
-      orderBy("createdAt", "desc")
-    );
-    const recQuery = query(
-      collection(db, "recommendations"),
-      where("groupId", "==", groupId),
-      orderBy("createdAt", "desc")
-    );
-    const serviceTypeQuery = query(collection(db, "serviceTypes"));
+  const fetchFeed = async () => {
+    const [reqSnap, recSnap, userSnap, serviceSnap] = await Promise.all([
+      getDocs(query(
+        collection(db, "requests"),
+        where("groupId", "==", groupId)
+      )),
+      getDocs(query(
+  collection(db, "recommendations"),
+  where("groupId", "==", groupId)
+)),
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "serviceTypes")),
+    ]);
 
-    const unsubReq = onSnapshot(reqQuery, (snapshot) => {
-      setRequests(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    const unsubRec = onSnapshot(recQuery, (snapshot) => {
-      setRecommendations(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    const unsubServiceTypes = onSnapshot(serviceTypeQuery, (snapshot) => {
-      const types = snapshot.docs
-        .map((doc) => doc.id)
-        .filter((type) => type && type.trim() !== "");
-      setServiceTypes(types);
-    });
+    setRequests(reqSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))); // still used in reply logic
+    setRecommendations(recSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-    return () => {
-      unsubReq();
-      unsubRec();
-      unsubServiceTypes();
-    };
-  }, [user, groupExists, groupId, hasGroupAccess]);
+    const types = serviceSnap.docs
+      .map(doc => doc.id)
+      .filter(id => id && id.trim() !== "");
+    setServiceTypes(types);
 
+    const combined = [
+      ...reqSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        type: "request"
+      })),
+      ...recSnap.docs
+  .filter(doc => !doc.data().linkedRequestId)  // filter out replies
+  .map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    type: "recommendation"
+  })),
+      ...userSnap.docs
+        .filter(doc => doc.data().groupIds?.includes(groupId))
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "user_joined"
+        }))
+    ]
+      .filter(item => item.createdAt)
+      .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+
+    setFeedItems(combined);
+  };
+
+  fetchFeed();
+}, [user, groupExists, groupId, hasGroupAccess]);
   const handleRequestSubmit = async () => {
     let finalServiceType = newRequestServiceType;
     if (newRequestServiceType === "__custom") {
@@ -308,20 +329,74 @@ export default function GroupPage() {
       </>
     );
   }
-
+// === Onboarding Progress Logic ===
+const totalSteps = 3;
+const hasJoinedGroup = !!hasGroupAccess;
+const hasPostedRec = recommendations.some(
+  (rec) => rec.submittedByUid === user?.uid
+);
+const completedSteps = [
+  user ? 1 : 0,
+  hasJoinedGroup ? 1 : 0,
+  hasPostedRec ? 1 : 0,
+].reduce((a, b) => a + b, 0);
+const progressPercent = Math.round((completedSteps / totalSteps) * 100);
   return (
     <>
-      <Header />
-      <div className="min-h-screen bg-gray-100 p-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-4">
-  <h1 className="text-3xl font-bold">{groupId.charAt(0).toUpperCase() + groupId.slice(1)} Trusted Recommendations</h1>
-  {userGroupIndex !== null && groupUserCount !== null && (
-    <p className="text-gray-600 text-sm sm:ml-4 sm:mt-0 mt-2">
-      You’re user #{userGroupIndex} of {groupUserCount} in this group.
+  <Header />
+  <div className="min-h-screen bg-gray-100 p-6">
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-3xl font-bold mb-1">
+         {groupId.charAt(0).toUpperCase() + groupId.slice(1)} Recommendations
+        </h1>
+        {userGroupIndex !== null && groupUserCount !== null && (
+          <p className="text-gray-600 text-sm">
+            You’re neighboroonie #{userGroupIndex} of {groupUserCount} in this group.
+          </p>
+        )}
+      </div>
+
+      {user && progressPercent < 100 && (
+  <div className="mb-6">
+    <div className="text-sm text-gray-600 mb-1">
+      Profile progress:{" "}
+      <strong>{progressPercent}% complete</strong>
+    </div>
+    <div className="w-full bg-gray-200 rounded-full h-2">
+      <div
+        className="bg-green-500 h-2 rounded-full transition-all duration-500"
+        style={{ width: `${progressPercent}%` }}
+      />
+    </div>
+  </div>
+)}
+
+{progressPercent === 67 && (
+  <div className="text-sm text-yellow-900 bg-yellow-50 border border-yellow-300 rounded p-4 mb-6">
+    <p className="mb-1 font-medium">You’re almost there! 🎯</p>
+    <p className="mb-2">
+      Just one more step to complete your profile and help seed this community.
+      Visit <Link to="/my-list" className="underline text-blue-600 font-medium">your list</Link> to add a trusted recommendation.
     </p>
-  )}
-</div>
+    <p className="text-xs text-gray-500">Or pick a category below to ask for a rec.</p>
+  </div>
+)}
+{progressPercent === 100 && (
+  <div className="text-sm text-green-900 bg-green-50 border border-green-300 rounded p-4 mb-6">
+    <p className="mb-1 font-medium">Nice work! ✅</p>
+   <p className="mb-2">
+  You’re one of the first to contribute — thank you.  
+  Ready to share a few more names your neighbors should know?
+</p>
+    <button
+      onClick={() => navigate("/my-list")}
+      className="bg-green-600 text-white text-sm px-3 py-1 rounded hover:bg-green-700"
+    >
+      Add More Recommendations
+    </button>
+  </div>
+)}
 {/* Search and Request Form */}
 <CategorySearchAndPrompt
   serviceTypes={serviceTypes}
@@ -349,23 +424,33 @@ export default function GroupPage() {
     navigate(`/request/${docRef.id}`);
   }}
 />
+          {/* Collapsible Standalone Recommendation Form */}
+{/* <div className="bg-white p-4 rounded shadow mb-6">
+  <button
+    onClick={() => setShowRecForm(!showRecForm)}
+    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded"
+  >
+    {showRecForm ? "Hide Recommendation Form" : "+ Add a Recommendation"}
+  </button>
 
-          {/* Standalone Recommendation Form */}
-          <div className="bg-white p-4 rounded shadow mb-6">
-            <h2 className="text-xl font-semibold mb-2">
-              Submit a General Recommendation
-            </h2>
-            <p className="text-gray-600 text-sm mb-2">
-              👋 New here? Shout out a contractor or service provider who you'd highly recommend.
-            </p>
-            <StandaloneRecForm
-              groupId={groupId}
-              user={user}
-              serviceTypeOptions={serviceTypes}
-            />
-          </div>
+  {showRecForm && (
+    <div className="mt-4">
+      <h2 className="text-xl font-semibold mb-2">
+        Submit a General Recommendation
+      </h2>
+      <p className="text-gray-600 text-sm mb-2">
+        👋 New here? Shout out a contractor or service provider who you'd highly recommend.
+      </p>
+      <StandaloneRecForm
+        groupId={groupId}
+        user={user}
+        serviceTypeOptions={serviceTypes}
+      />
+    </div>
+  )}
+</div> /} 
          
-          {/* Request Form */}
+          {/* Old Request Form */}
 {/*
           <div className="bg-white p-4 rounded shadow mb-6">
             <h2 className="text-xl font-semibold mb-2">Ask for a Recommendation</h2>
@@ -402,29 +487,45 @@ export default function GroupPage() {
           </div>*/}
           {/* Requests & Replies */}
 <div className="mb-8">
-  <h2 className="text-xl font-semibold mb-2">Recent Requests for Recommendations</h2>
-  {requests.length === 0 ? (
-    <p className="text-gray-500 italic">No requests yet.</p>
+  <h2 className="text-xl font-semibold mb-4">Group Activity</h2>
+  {feedItems.length === 0 ? (
+    <p className="text-gray-500 italic">No recent activity yet.</p>
   ) : (
-    requests.map((req) => {
-      const directRecs = recommendations.filter(
-        (rec) => rec.linkedRequestId === req.id
-      );
-      const matchedRecs = getMatchingRecs(req);
+    feedItems.map((item) => {
+      switch (item.type) {
+        case "request":
+          return (
+            <div key={`request-${item.id}`} className="bg-white border p-4 mb-4 rounded">
+              <p className="text-sm text-gray-600">🛠️ A neighbor asked:</p>
+              <p className="font-semibold mb-2">{item.text}</p>
+              <Link to={`/request/${item.id}`} className="text-blue-600 underline text-sm">
+                View Request →
+              </Link>
+            </div>
+          );
 
-      return (
-        <Request
-          key={req.id}
-          request={req}
-          directRecs={directRecs}
-          matchedRecs={matchedRecs}
-          newReplies={newReplies}
-          setNewReplies={setNewReplies}
-          handleReplySubmit={handleReplySubmit}
-          serviceTypes={serviceTypes}
-          user={user} // ✅ required for ThankButton
-        />
-      );
+        case "recommendation":
+          return (
+            <div key={`rec-${item.id}`} className="bg-gray-50 border p-4 mb-4 rounded">
+              <p className="text-sm text-gray-600">✅ A neighbor recommended:</p>
+              <p className="font-semibold">{item.name}</p>
+              <p className="text-sm text-gray-500 mb-2">for {item.serviceType}</p>
+              <Link to={`/recommendations/${item.id}`} className="text-blue-600 underline text-sm">
+                View Recommendation →
+              </Link>
+            </div>
+          );
+
+        case "user_joined":
+          return (
+            <div key={`user-${item.id}`} className="bg-white border p-4 mb-4 rounded text-sm text-gray-500 italic">
+              🙋 {item.firstName || item.email} just joined the group.
+            </div>
+          );
+
+        default:
+          return null;
+      }
     })
   )}
 </div>
