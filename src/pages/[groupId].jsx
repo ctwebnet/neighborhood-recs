@@ -519,7 +519,7 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
         case "user_joined":
           return (
             <div key={`user-${item.id}`} className="bg-white border p-4 mb-4 rounded text-sm text-gray-500 italic">
-              🙋 {item.firstName || item.email} just joined the group.
+              <span className="text-2xl mr-2">🦩</span>{item.firstName || item.email} just joined the group.
             </div>
           );
 
