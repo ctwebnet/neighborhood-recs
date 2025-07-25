@@ -46,99 +46,103 @@ export default function GroupPage() {
   const [showRecForm, setShowRecForm] = useState(false); 
   const [feedItems, setFeedItems] = useState([]);
 
-  useEffect(() => {
-  const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-    setUser(currentUser);
-    setLoading(false);
+ useEffect(() => {
+  let unsubscribeAuth;
 
-    if (!currentUser) return;
-
-    const userRef = doc(db, "users", currentUser.uid);
-    const userSnap = await getDoc(userRef);
-
-    let firstName = "";
-    let lastName = "";
-    if (currentUser.displayName) {
-      const nameParts = currentUser.displayName.split(" ");
-      firstName = nameParts[0] || "";
-      lastName = nameParts.slice(1).join(" ") || "";
-    }
-
-    if (!userSnap.exists()) {
-  // 🆕 Count how many users exist to assign userNumber
-  const allUsersSnap = await getDocs(collection(db, "users"));
-  const userNumber = allUsersSnap.size >= 0 ? allUsersSnap.size : 0;
-
-  await setDoc(userRef, {
-    email: currentUser.email,
-    firstName,
-    lastName,
-    groupIds: [groupId],
-    userNumber,
-    createdAt: serverTimestamp(),
-  });
-  setHasGroupAccess(true);
-} else {
-  const userData = userSnap.data();
-
-  // 🧠 Only set userNumber and createdAt if they’re missing
-  const updatedData = { ...userData };
-
-  if (!userData.userNumber) {
-    const allUsersSnap = await getDocs(collection(db, "users"));
-    updatedData.userNumber = allUsersSnap.size;
-  }
-
-  if (!userData.createdAt) {
-    updatedData.createdAt = serverTimestamp();
-  }
-
-  if (!userData.groupIds) {
-    updatedData.groupIds = [groupId];
-    setHasGroupAccess(true);
-  } else if (!userData.groupIds.includes(groupId)) {
-    updatedData.groupIds = [...userData.groupIds, groupId];
-    setHasGroupAccess(true);
-  } else {
-    setHasGroupAccess(true);
-  }
-
-  await setDoc(userRef, updatedData);
-}
-
-    // Always check group index and count once user is valid
+  const checkGroupAndInitAuth = async () => {
     try {
-      const usersSnap = await getDocs(collection(db, "users"));
-      const groupUsers = usersSnap.docs.filter(doc =>
-        doc.data().groupIds?.includes(groupId)
-      );
-      setGroupUserCount(groupUsers.length);
+      const groupDoc = await getDoc(doc(db, "groups", groupId));
+      const exists = groupDoc.exists();
+      setGroupExists(exists);
 
-      const sortedGroupUsers = groupUsers.sort((a, b) =>
-        a.data().email.localeCompare(b.data().email)
-      );
-
-      const index = sortedGroupUsers.findIndex(u => u.id === currentUser.uid);
-      setUserGroupIndex(index >= 0 ? index + 1 : null);
-    } catch (error) {
-      console.error("Error calculating group index:", error);
-    }
-  });
-
-  return () => unsubscribeAuth();
-}, [groupId]);
-
-  useEffect(() => {
-    const checkGroup = async () => {
-      try {
-        const groupDoc = await getDoc(doc(db, "groups", groupId));
-        setGroupExists(groupDoc.exists());
-      } catch (err) {
-        setGroupExists(false);
+      if (!exists) {
+        setLoading(false); // Stop loading if group doesn't exist
+        return;
       }
-    };
-    checkGroup();
-  }, [groupId]);
+
+      unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+        setUser(currentUser);
+        setLoading(false);
+
+        if (!currentUser) return;
+
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        let firstName = "";
+        let lastName = "";
+        if (currentUser.displayName) {
+          const nameParts = currentUser.displayName.split(" ");
+          firstName = nameParts[0] || "";
+          lastName = nameParts.slice(1).join(" ") || "";
+        }
+
+        if (!userSnap.exists()) {
+          const allUsersSnap = await getDocs(collection(db, "users"));
+          const userNumber = allUsersSnap.size >= 0 ? allUsersSnap.size : 0;
+
+          await setDoc(userRef, {
+            email: currentUser.email,
+            firstName,
+            lastName,
+            groupIds: [groupId],
+            userNumber,
+            createdAt: serverTimestamp(),
+          });
+          setHasGroupAccess(true);
+        } else {
+          const userData = userSnap.data();
+          const updatedData = { ...userData };
+
+          if (!userData.userNumber) {
+            const allUsersSnap = await getDocs(collection(db, "users"));
+            updatedData.userNumber = allUsersSnap.size;
+          }
+
+          if (!userData.createdAt) {
+            updatedData.createdAt = serverTimestamp();
+          }
+
+          if (!userData.groupIds) {
+            updatedData.groupIds = [groupId];
+            setHasGroupAccess(true);
+          } else if (!userData.groupIds.includes(groupId)) {
+            updatedData.groupIds = [...userData.groupIds, groupId];
+            setHasGroupAccess(true);
+            
+          } else {
+            setHasGroupAccess(true);
+          }
+
+          await setDoc(userRef, updatedData);
+        }
+
+        const usersSnap = await getDocs(collection(db, "users"));
+        const groupUsers = usersSnap.docs.filter(doc =>
+          doc.data().groupIds?.includes(groupId)
+        );
+        setGroupUserCount(groupUsers.length);
+
+        const sortedGroupUsers = groupUsers.sort((a, b) =>
+          a.data().email.localeCompare(b.data().email)
+        );
+
+        const index = sortedGroupUsers.findIndex(u => u.id === currentUser.uid);
+        setUserGroupIndex(index >= 0 ? index + 1 : null);
+      });
+    } catch (err) {
+      console.error("Failed to check group or initialize auth:", err);
+      setGroupExists(false);
+      setLoading(false);
+    }
+  };
+
+  checkGroupAndInitAuth();
+
+  return () => {
+    if (unsubscribeAuth) unsubscribeAuth();
+  };
+}, [groupId]);
 
   useEffect(() => {
   if (!user || !groupExists || !hasGroupAccess) return;
