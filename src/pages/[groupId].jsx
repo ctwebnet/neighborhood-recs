@@ -282,7 +282,7 @@ export default function GroupPage() {
         <Header />
         <div className="min-h-screen bg-gray-100 p-6 text-center">
           <h1 className="text-3xl font-bold mb-4">Group not found.</h1>
-          <p className="text-gray-600">Please check the link or contact an admin.</p>
+          <p className="text-gray-600">Try signing in above to see if you’re already a member — or ask a neighbor for a link if you're not.</p>
         </div>
         <Footer user={user} />
       </>
