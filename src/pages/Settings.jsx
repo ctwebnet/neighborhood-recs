@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [replyEmailOptOut, setReplyEmailOptOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [thankYouEmailOptOut, setThankYouEmailOptOut] = useState(false);
+  const [weeklyDigestOptOut, setWeeklyDigestOptOut] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -30,6 +31,7 @@ export default function SettingsPage() {
         setEmailOptOut(data.emailOptOut || false);
         setReplyEmailOptOut(data.replyEmailOptOut || false);
         setThankYouEmailOptOut(data.thankYouEmailOptOut || false);
+        setWeeklyDigestOptOut(data.weeklyDigestOptOut || false);
       }
 
       setLoading(false);
@@ -74,7 +76,16 @@ export default function SettingsPage() {
       : "You’ll be notified when someone thanks your recommendation!"
   );
 };
-
+const handleToggleWeeklyDigest = async () => {
+  const newValue = !weeklyDigestOptOut;
+  setWeeklyDigestOptOut(newValue);
+  await updateSetting("weeklyDigestOptOut", newValue);
+  toast.success(
+    newValue
+      ? "You’ll stop receiving the weekly group recap."
+      : "You’ll get weekly updates with new recommendations in your group!"
+  );
+};
   if (loading) {
     return (
       <>
@@ -114,7 +125,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between border-b py-3">
-            <span>Email me when someone posts to my group</span>
+            <span>Email me when someone requests a rec in my group</span>
             <label className="inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -145,6 +156,18 @@ export default function SettingsPage() {
       type="checkbox"
       checked={!thankYouEmailOptOut}
       onChange={handleToggleThankYouEmails}
+      className="sr-only peer"
+    />
+    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all"></div>
+  </label>
+</div>
+<div className="flex items-center justify-between border-b py-3">
+  <span>Send me a weekly email with new recommendations in my group</span>
+  <label className="inline-flex items-center cursor-pointer">
+    <input
+      type="checkbox"
+      checked={!weeklyDigestOptOut}
+      onChange={handleToggleWeeklyDigest}
       className="sr-only peer"
     />
     <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all"></div>
