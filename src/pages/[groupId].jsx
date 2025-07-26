@@ -109,7 +109,7 @@ export default function GroupPage() {
           } else if (!userData.groupIds.includes(groupId)) {
             updatedData.groupIds = [...userData.groupIds, groupId];
             setHasGroupAccess(true);
-            
+
           } else {
             setHasGroupAccess(true);
           }
@@ -176,7 +176,7 @@ export default function GroupPage() {
         type: "request"
       })),
       ...recSnap.docs
-  .filter(doc => !doc.data().linkedRequestId)  // filter out replies
+ // .filter(doc => !doc.data().linkedRequestId)  // filter out replies
   .map(doc => ({
     id: doc.id,
     ...doc.data(),
