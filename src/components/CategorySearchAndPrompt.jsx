@@ -162,7 +162,7 @@ export default function CategorySearchAndPrompt({
               className="mt-2 btn-secondary text-sm py-1 px-3"
               onClick={() => setShowInlineForm(true)}
             >
-              Requests New Recommendations
+              Request New Recommendations
             </button>
           ) : (
             <div className="mt-3">
