@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
+import stringSimilarity from "string-similarity";
 
 export default function CategorySearchAndPrompt({
   serviceTypes = [],
@@ -11,6 +12,14 @@ export default function CategorySearchAndPrompt({
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [requestText, setRequestText] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  useEffect(() => {
+  if (requestText.trim() && serviceTypes.length > 0) {
+    const bestMatch = stringSimilarity.findBestMatch(requestText, serviceTypes).bestMatch;
+    if (bestMatch.rating > 0.3) {
+      setSelectedCategory(bestMatch.target);
+    }
+  }
+}, [requestText, serviceTypes]);
 
   const effectiveCategory =
     selectedCategory === "__custom" ? customCategory : selectedCategory;
