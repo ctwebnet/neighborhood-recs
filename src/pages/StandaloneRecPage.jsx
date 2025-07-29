@@ -20,6 +20,7 @@ import { auth, db } from "../firebase";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { Toaster, toast } from "react-hot-toast";
+import { saveRecommendationForUser } from "../utils/saveRec";
 
 const StandaloneRecPage = () => {
   const { recId } = useParams();
@@ -29,6 +30,7 @@ const StandaloneRecPage = () => {
   const [groupRecs, setGroupRecs] = useState([]);
   const [hasGroupAccess, setHasGroupAccess] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasSaved, setHasSaved] = useState(false);
   const [hasThanked, setHasThanked] = useState(false);
 const [thanksCount, setThanksCount] = useState(0);
 const handleThank = async () => {
@@ -40,6 +42,17 @@ const handleThank = async () => {
 
   setHasThanked(true);
   setThanksCount(Object.keys(updatedThanks).length);
+};
+const handleSave = async () => {
+  if (!user || !rec || user.uid === rec.submittedByUid) return;
+
+  try {
+    await saveRecommendationForUser(user.uid, rec);
+    toast.success("Saved to your list!");
+  } catch (error) {
+    console.error("Failed to save:", error);
+    toast.error("Error saving recommendation.");
+  }
 };
 
   useEffect(() => {
@@ -71,10 +84,16 @@ const handleThank = async () => {
 
       const recData = recSnap.data();
       setRec({ id: recSnap.id, ...recData });
+      
       const thanks = recData.thanks || {};
 setHasThanked(thanks[user.uid] === true);
 setThanksCount(Object.keys(thanks).length);
-
+// ✅ Check if already saved
+if (user) {
+  const savedRef = doc(db, "savedRecs", user.uid, "items", recSnap.id);
+  const savedSnap = await getDoc(savedRef);
+  setHasSaved(savedSnap.exists());
+}
 
       const groupId = recData.groupId;
       const userRef = doc(db, "users", user.uid);
@@ -227,18 +246,34 @@ setThanksCount(Object.keys(thanks).length);
             {rec.submittedBy?.name || "unknown"}
           </Link>
         </p>
-<div className="mb-4">
+<div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+  <div>
+    <button
+      onClick={handleThank}
+      className={`px-4 py-2 rounded ${
+        hasThanked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 text-white"
+      }`}
+      disabled={hasThanked}
+    >
+      {hasThanked ? "Thanks sent!" : "Say Thanks"}
+    </button>
+    {thanksCount > 0 && (
+      <span className="ml-2 text-sm text-gray-600">{thanksCount} thanked this</span>
+    )}
+  </div>
+
+  {user.uid !== rec.submittedByUid && (
+    <div className="mb-4">
   <button
-    onClick={handleThank}
-    className={`px-4 py-2 rounded ${
-      hasThanked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 text-white"
+    onClick={handleSave}
+    className={`ml-2 px-4 py-2 rounded ${
+      hasSaved ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white"
     }`}
-    disabled={hasThanked}
+    disabled={hasSaved}
   >
-    {hasThanked ? "Thanks sent!" : "Say Thanks"}
+    {hasSaved ? "Saved ✓" : "Save to My List"}
   </button>
-  {thanksCount > 0 && (
-    <span className="ml-2 text-sm text-gray-600">{thanksCount} thanked this</span>
+</div>
   )}
 </div>
         {groupRecs.length > 0 && (
