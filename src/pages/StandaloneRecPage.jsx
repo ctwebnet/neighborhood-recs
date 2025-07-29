@@ -22,6 +22,7 @@ import Footer from "../components/Footer";
 import { Toaster, toast } from "react-hot-toast";
 import { saveRecommendationForUser } from "../utils/saveRec";
 
+
 const StandaloneRecPage = () => {
   const { recId } = useParams();
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ const StandaloneRecPage = () => {
   const [loading, setLoading] = useState(true);
   const [hasSaved, setHasSaved] = useState(false);
   const [hasThanked, setHasThanked] = useState(false);
+  const [saving, setSaving] = useState(false);
 const [thanksCount, setThanksCount] = useState(0);
 const handleThank = async () => {
   if (!rec || hasThanked) return;
@@ -84,7 +86,7 @@ const handleSave = async () => {
 
       const recData = recSnap.data();
       setRec({ id: recSnap.id, ...recData });
-      
+
       const thanks = recData.thanks || {};
 setHasThanked(thanks[user.uid] === true);
 setThanksCount(Object.keys(thanks).length);
@@ -246,34 +248,31 @@ if (user) {
             {rec.submittedBy?.name || "unknown"}
           </Link>
         </p>
-<div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:gap-4">
-  <div>
-    <button
-      onClick={handleThank}
-      className={`px-4 py-2 rounded ${
-        hasThanked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 text-white"
-      }`}
-      disabled={hasThanked}
-    >
-      {hasThanked ? "Thanks sent!" : "Say Thanks"}
-    </button>
-    {thanksCount > 0 && (
-      <span className="ml-2 text-sm text-gray-600">{thanksCount} thanked this</span>
-    )}
-  </div>
+<div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+  <button
+    onClick={handleThank}
+    className={`px-4 py-2 rounded ${
+      hasThanked ? "bg-gray-300 cursor-not-allowed" : "bg-blue-600 text-white"
+    }`}
+    disabled={hasThanked}
+  >
+    {hasThanked ? "Thanks sent!" : "Say Thanks"}
+  </button>
+
+  {thanksCount > 0 && (
+    <span className="text-sm text-gray-600 sm:ml-2">{thanksCount} thanked this</span>
+  )}
 
   {user.uid !== rec.submittedByUid && (
-    <div className="mb-4">
-  <button
-    onClick={handleSave}
-    className={`ml-2 px-4 py-2 rounded ${
-      hasSaved ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white"
-    }`}
-    disabled={hasSaved}
-  >
-    {hasSaved ? "Saved ✓" : "Save to My List"}
-  </button>
-</div>
+    <button
+      onClick={handleSave}
+      className={`px-4 py-2 rounded ${
+        hasSaved ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white"
+      }`}
+      disabled={hasSaved || saving}
+    >
+      {hasSaved ? "Saved ✓" : saving ? "Saving..." : "Save to My List"}
+    </button>
   )}
 </div>
         {groupRecs.length > 0 && (
