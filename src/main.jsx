@@ -12,10 +12,10 @@ import RequestPage from './pages/RequestPage';
 import MyListPage from "./pages/MyListPage";
 import UserListPage from "./pages/UserListPage";
 import StandaloneRecPage from "./pages/StandaloneRecPage";
-import { inject } from '@vercel/analytics';
 import { Toaster } from "react-hot-toast";
 import "./index.css";
-
+import { inject } from '@vercel/analytics';
+inject(); // ← this runs the Vercel Analytics script
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <>
@@ -35,7 +35,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/recommendations/:recId" element={<StandaloneRecPage />} />
         </Routes>
       </Router>
-      <Analytics />
     </>
   </React.StrictMode>
 );
