@@ -12,7 +12,7 @@ import RequestPage from './pages/RequestPage';
 import MyListPage from "./pages/MyListPage";
 import UserListPage from "./pages/UserListPage";
 import StandaloneRecPage from "./pages/StandaloneRecPage";
-import { Analytics } from '@vercel/analytics/react';
+import { inject } from '@vercel/analytics';
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
