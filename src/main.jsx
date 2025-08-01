@@ -12,6 +12,7 @@ import RequestPage from './pages/RequestPage';
 import MyListPage from "./pages/MyListPage";
 import UserListPage from "./pages/UserListPage";
 import StandaloneRecPage from "./pages/StandaloneRecPage";
+import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
@@ -34,6 +35,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/recommendations/:recId" element={<StandaloneRecPage />} />
         </Routes>
       </Router>
+      <Analytics />
     </>
   </React.StrictMode>
 );
