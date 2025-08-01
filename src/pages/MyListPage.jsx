@@ -175,37 +175,37 @@ const [savedRecs, setSavedRecs] = useState([]);
     ) : (
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">My List</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewSaved(false)}
-                className={`px-4 py-2 rounded text-sm ${
-                  !viewSaved ? "bg-black text-white" : "bg-gray-200"
-                }`}
-              >
-                My Recommendations
-              </button>
-              <button
-                onClick={() => setViewSaved(true)}
-                className={`px-4 py-2 rounded text-sm ${
-                  viewSaved ? "bg-black text-white" : "bg-gray-200"
-                }`}
-              >
-                Saved Recommendations
-              </button>
-            </div>
-            <button
-              onClick={() => {
-                const shareUrl = `${window.location.origin}/users/${user.uid}`;
-                navigator.clipboard.writeText(shareUrl);
-                toast.success("Link copied!");
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm"
-            >
-              Share Your List
-            </button>
-          </div>
+          <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-2 mb-4">
+  <h2 className="text-2xl font-bold w-full sm:w-auto">My List</h2>
+  <div className="flex gap-2 w-full sm:w-auto">
+    <button
+      onClick={() => setViewSaved(false)}
+      className={`px-4 py-2 rounded text-sm w-full sm:w-auto ${
+        !viewSaved ? "bg-black text-white" : "bg-gray-200"
+      }`}
+    >
+      My Recommendations
+    </button>
+    <button
+      onClick={() => setViewSaved(true)}
+      className={`px-4 py-2 rounded text-sm w-full sm:w-auto ${
+        viewSaved ? "bg-black text-white" : "bg-gray-200"
+      }`}
+    >
+      Saved Recommendations
+    </button>
+  </div>
+  <button
+    onClick={() => {
+      const shareUrl = `${window.location.origin}/users/${user.uid}`;
+      navigator.clipboard.writeText(shareUrl);
+      toast.success("Link copied!");
+    }}
+    className="bg-green-600 text-white px-4 py-2 rounded text-sm w-full sm:w-auto"
+  >
+    Share Your List
+  </button>
+</div>
 
           <p className="text-sm text-gray-600 mb-4">
             You've submitted {recommendations.length} recommendations in {totalFilled} of{" "}
