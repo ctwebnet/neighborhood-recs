@@ -304,6 +304,7 @@ setTimeout(() => {
             setNewReplies={setNewReplies}
             handleReplySubmit={handleReplySubmit}
             serviceTypes={serviceTypes}
+            user={user}
           />
           {request && (
             <div className="mb-4">
