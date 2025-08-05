@@ -174,37 +174,39 @@ const MyListPage = () => {
       ) : (
         <div className="min-h-screen bg-gray-100 p-6">
           <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">My List</h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewSaved(false)}
-                  className={`px-4 py-2 rounded text-sm ${
-                    !viewSaved ? "bg-black text-white" : "bg-gray-200"
-                  }`}
-                >
-                  My Recommendations
-                </button>
-                <button
-                  onClick={() => setViewSaved(true)}
-                  className={`px-4 py-2 rounded text-sm ${
-                    viewSaved ? "bg-black text-white" : "bg-gray-200"
-                  }`}
-                >
-                  Saved Recommendations
-                </button>
-              </div>
-              <button
-                onClick={() => {
-                  const shareUrl = `${window.location.origin}/users/${user.uid}`;
-                  navigator.clipboard.writeText(shareUrl);
-                  toast.success("Link copied!");
-                }}
-                className="bg-green-600 text-white px-4 py-2 rounded text-sm"
-              >
-                Share Your List
-              </button>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+  <h2 className="text-2xl font-bold">My List</h2>
+  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+    <div className="flex gap-2">
+      <button
+        onClick={() => setViewSaved(false)}
+        className={`px-4 py-2 rounded text-sm ${
+          !viewSaved ? "bg-black text-white" : "bg-gray-200"
+        }`}
+      >
+        My Recommendations
+      </button>
+      <button
+        onClick={() => setViewSaved(true)}
+        className={`px-4 py-2 rounded text-sm ${
+          viewSaved ? "bg-black text-white" : "bg-gray-200"
+        }`}
+      >
+        Saved Recommendations
+      </button>
+    </div>
+    <button
+      onClick={() => {
+        const shareUrl = `${window.location.origin}/users/${user.uid}`;
+        navigator.clipboard.writeText(shareUrl);
+        toast.success("Link copied!");
+      }}
+      className="bg-green-600 text-white px-4 py-2 rounded text-sm"
+    >
+      Share Your List
+    </button>
+  </div>
+</div>
 
             {viewSaved ? (
               <SavedList savedRecs={savedRecs} />
