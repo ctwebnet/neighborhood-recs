@@ -56,7 +56,20 @@ const handleSave = async () => {
     toast.error("Error saving recommendation.");
   }
 };
-
+const handleShare = () => {
+  if (navigator.share) {
+    navigator
+      .share({
+        title: `Recommendation: ${rec.name}`,
+        text: rec.testimonial,
+        url: window.location.href,
+      })
+      .catch((err) => console.error("Error sharing:", err));
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("Link copied to clipboard!");
+  }
+};
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -96,6 +109,7 @@ if (user) {
   const savedSnap = await getDoc(savedRef);
   setHasSaved(savedSnap.exists());
 }
+
 
       const groupId = recData.groupId;
       const userRef = doc(db, "users", user.uid);
@@ -264,15 +278,23 @@ if (user) {
   )}
 
   {user.uid !== rec.submittedByUid && (
-    <button
-      onClick={handleSave}
-      className={`px-4 py-2 rounded ${
-        hasSaved ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white"
-      }`}
-      disabled={hasSaved || saving}
-    >
-      {hasSaved ? "Saved ✓" : saving ? "Saving..." : "Save to My List"}
-    </button>
+    <>
+      <button
+        onClick={handleSave}
+        className={`px-4 py-2 rounded ${
+          hasSaved ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 text-white"
+        }`}
+        disabled={hasSaved || saving}
+      >
+        {hasSaved ? "Saved ✓" : saving ? "Saving..." : "Save to My List"}
+      </button>
+      <button
+        onClick={handleShare}
+        className="px-4 py-2 rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
+      >
+        Share Recommendation
+      </button>
+    </>
   )}
 </div>
         {groupRecs.length > 0 && (
