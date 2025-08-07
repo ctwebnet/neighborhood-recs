@@ -3,6 +3,7 @@ import Footer from "../components/Footer";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams, Link, useNavigate  } from "react-router-dom";
+
 import {
   collection,
   addDoc,
@@ -15,6 +16,8 @@ import {
   getDoc,
   getDocs, 
   setDoc,
+  updateDoc, 
+  increment,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
@@ -45,6 +48,15 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [showRecForm, setShowRecForm] = useState(false); 
   const [feedItems, setFeedItems] = useState([]);
+  const [referralCount, setReferralCount] = useState(0);
+
+  useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get("ref");
+  if (ref) {
+    localStorage.setItem("referrerUid", ref);
+  }
+}, []);
 
  useEffect(() => {
   let unsubscribeAuth;
@@ -78,21 +90,42 @@ export default function GroupPage() {
         }
 
         if (!userSnap.exists()) {
-          const allUsersSnap = await getDocs(collection(db, "users"));
-          const userNumber = allUsersSnap.size >= 0 ? allUsersSnap.size : 0;
+  const allUsersSnap = await getDocs(collection(db, "users"));
+  const userNumber = allUsersSnap.size >= 0 ? allUsersSnap.size : 0;
 
-          await setDoc(userRef, {
-            email: currentUser.email,
-            firstName,
-            lastName,
-            groupIds: [groupId],
-            userNumber,
-            createdAt: serverTimestamp(),
-          });
-          setHasGroupAccess(true);
-        } else {
+  // Capture referrer from localStorage
+  const referrerUid = localStorage.getItem("referrerUid");
+
+  await setDoc(userRef, {
+    email: currentUser.email,
+    firstName,
+    lastName,
+    groupIds: [groupId],
+    userNumber,
+    createdAt: serverTimestamp(),
+    referredBy: referrerUid || null,
+  });
+
+  if (referrerUid) {
+    const referrerRef = doc(db, "users", referrerUid);
+    await updateDoc(referrerRef, {
+      referralCount: increment(1),
+    });
+    localStorage.removeItem("referrerUid");
+  }
+
+  setHasGroupAccess(true);
+} else {
           const userData = userSnap.data();
           const updatedData = { ...userData };
+          // Fetch number of users referred by the current user
+const referredSnap = await getDocs(query(
+  collection(db, "users"),
+  where("referredBy", "==", currentUser.uid)
+));
+
+const referredCount = referredSnap.size;
+setReferralCount(referredCount);
 
           if (!userData.userNumber) {
             const allUsersSnap = await getDocs(collection(db, "users"));
@@ -348,17 +381,48 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
   return (
     <>
   <Header />
-  <div className="min-h-screen bg-gray-100 p-6">
+<div className="min-h-screen bg-gray-100 p-6">
     <div className="max-w-3xl mx-auto">
       <div className="mb-4">
         <h1 className="text-3xl font-bold mb-1">
          {groupId.charAt(0).toUpperCase() + groupId.slice(1)} Recommendations
         </h1>
-        {userGroupIndex !== null && groupUserCount !== null && (
-          <p className="text-gray-600 text-sm">
-            You’re neighboroonie #{userGroupIndex} of {groupUserCount} in this group.
-          </p>
-        )}
+       <div className="flex items-center text-sm text-gray-600 flex-wrap gap-2">
+  <p className="m-0">
+    {referralCount === 0
+      ? "Want to help more neighbors join?"
+      : `You've helped ${referralCount} neighbor${referralCount !== 1 ? "s" : ""} join.`}
+  </p>
+  {user && hasGroupAccess && (
+    <button
+      onClick={async () => {
+        const url = `${window.location.origin}/group/${groupId}?ref=${user.uid}`;
+        const title = `Join my group on Neighboroonie`;
+
+        if (navigator.share) {
+          try {
+            await navigator.share({ title, url });
+            toast.success("Thanks for sharing!");
+          } catch (err) {
+            console.log("Share cancelled or failed", err);
+          }
+        } else {
+          try {
+            await navigator.clipboard.writeText(url);
+            toast.success("Copied link to clipboard!");
+          } catch (err) {
+            console.error("Clipboard failed", err);
+            alert("Couldn't copy to clipboard, sorry.");
+          }
+        }
+      }}
+      className="text-xs bg-pink-600 hover:bg-pink-700 text-white px-3 py-1 rounded shadow whitespace-nowrap"
+    >
+      <span className="inline-block rounded-full bg-white w-5 h-5 text-center leading-5 mr-1">🦩</span>
+      Invite
+    </button>
+  )}
+</div>
       </div>
 
       {user && progressPercent < 100 && (

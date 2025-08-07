@@ -12,6 +12,8 @@ import RequestPage from './pages/RequestPage';
 import MyListPage from "./pages/MyListPage";
 import UserListPage from "./pages/UserListPage";
 import StandaloneRecPage from "./pages/StandaloneRecPage";
+import FollowingFeed from "./pages/FollowingFeed";
+import InvitePage from "./pages/InvitePage";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 import { inject } from '@vercel/analytics';
@@ -33,6 +35,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/my-list" element={<MyListPage />} />
           <Route path="/users/:uid" element={<UserListPage />} />
           <Route path="/recommendations/:recId" element={<StandaloneRecPage />} />
+          <Route path="/following" element={<FollowingFeed />} />
+          <Route path="/invite" element={<InvitePage />} />
         </Routes>
       </Router>
     </>

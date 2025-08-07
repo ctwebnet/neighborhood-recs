@@ -16,6 +16,7 @@ import ThankButton from "../components/ThankButton";
 import { Toaster, toast } from "react-hot-toast";
 import SavedList from "../components/SavedList";
 import { getSavedRecsForUser } from "../utils/savedRecs";
+import FollowButton from "../components/FollowButton";
 
 const UserListPage = () => {
   const { uid } = useParams();
@@ -128,9 +129,16 @@ const [thankedRecs, setThankedRecs] = useState([]);
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-          <h2 className="text-2xl font-bold mb-4">
-            {targetUser.firstName ? `${targetUser.firstName}'s List` : `Recommendations by ${targetUser.email}`}
-          </h2>
+          <div className="mb-4">
+  <h2 className="text-2xl font-bold">
+    {targetUser.firstName
+      ? `${targetUser.firstName}'s List`
+      : `Recommendations by ${targetUser.email}`}
+  </h2>
+  <div className="mt-2">
+    <FollowButton currentUserId={currentUser?.uid} targetUserId={uid} />
+  </div>
+</div>
           {recommendations.length === 0 ? (
             <p className="text-gray-600">No recommendations found.</p>
           ) : (

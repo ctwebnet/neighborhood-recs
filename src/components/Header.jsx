@@ -30,6 +30,14 @@ export default function Header() {
     fetchGroups();
   }, [user]);
 
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get("ref");
+  if (ref) {
+    localStorage.setItem("referrerUid", ref);
+  }
+}, []);
+
   return (
     <header className="bg-white shadow mb-6">
       <div className="max-w-4xl mx-auto px-4 py-4 relative">
@@ -45,22 +53,28 @@ export default function Header() {
 
         {user && (
           <nav className="mt-4 text-center space-x-4 text-sm">
-            <Link
-              to="/my-list"
-              className="text-blue-600 underline hover:text-blue-800"
-            >
-              My List
-            </Link>
-            {groupIds.map((groupId) => (
-              <Link
-                key={groupId}
-                to={`/${groupId}`}
-                className="text-blue-600 underline hover:text-blue-800"
-              >
-                {groupId.charAt(0).toUpperCase() + groupId.slice(1)}
-              </Link>
-            ))}
-          </nav>
+  <Link
+    to="/my-list"
+    className="text-blue-600 underline hover:text-blue-800"
+  >
+    My List
+  </Link>
+  <Link
+    to="/following"
+    className="text-blue-600 underline hover:text-blue-800"
+  >
+    Following
+  </Link>
+  {groupIds.map((groupId) => (
+    <Link
+      key={groupId}
+      to={`/${groupId}`}
+      className="text-blue-600 underline hover:text-blue-800"
+    >
+      {groupId.charAt(0).toUpperCase() + groupId.slice(1)}
+    </Link>
+  ))}
+</nav>
         )}
 
         <div className="absolute right-4 top-4 text-sm space-x-2 flex items-center">
