@@ -396,7 +396,7 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
   {user && hasGroupAccess && (
     <button
       onClick={async () => {
-        const url = `${window.location.origin}/group/${groupId}?ref=${user.uid}`;
+        const url = `${window.location.origin}/${groupId}?ref=${user.uid}`;
         const title = `Join my group on Neighboroonie`;
 
         if (navigator.share) {
