@@ -291,8 +291,7 @@ if (user) {
       <button
         onClick={handleShare}
         className="px-4 py-2 rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
-      >
-        Share Recommendation
+      >Share
       </button>
     </>
   )}
