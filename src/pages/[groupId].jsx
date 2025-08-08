@@ -388,6 +388,11 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
          {groupId.charAt(0).toUpperCase() + groupId.slice(1)} Recommendations
         </h1>
        <div className="flex items-center text-sm text-gray-600 flex-wrap gap-2">
+       <p className="text-gray-600 text-sm">
+  {userGroupIndex !== null && groupUserCount !== null && (
+    <>You're neighboroonie #{userGroupIndex} of {groupUserCount} in this group.</>
+  )}
+</p>
   <p className="m-0">
     {referralCount === 0
       ? "Want to help more neighbors join?"
