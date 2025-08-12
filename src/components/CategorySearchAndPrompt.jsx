@@ -6,28 +6,27 @@ export default function CategorySearchAndPrompt({
   serviceTypes = [],
   recommendations = [],
   onPrefillRequest,
+  groupMemberCount = 0, // <— pass this in
 }) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
-  const [showInlineForm, setShowInlineForm] = useState(false);
   const [requestText, setRequestText] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+
   useEffect(() => {
-  if (requestText.trim() && serviceTypes.length > 0) {
-    const bestMatch = stringSimilarity.findBestMatch(requestText, serviceTypes).bestMatch;
-    if (bestMatch.rating > 0.3) {
-      setSelectedCategory(bestMatch.target);
+    if (requestText.trim() && serviceTypes.length > 0) {
+      const bestMatch = stringSimilarity.findBestMatch(requestText, serviceTypes).bestMatch;
+      if (bestMatch.rating > 0.3) {
+        setSelectedCategory(bestMatch.target);
+      }
     }
-  }
-}, [requestText, serviceTypes]);
+  }, [requestText, serviceTypes]);
 
   const effectiveCategory =
     selectedCategory === "__custom" ? customCategory : selectedCategory;
 
   const matchingRecs = useMemo(() => {
-    return recommendations.filter(
-      (rec) => rec.serviceType === effectiveCategory
-    );
+    return recommendations.filter((rec) => rec.serviceType === effectiveCategory);
   }, [effectiveCategory, recommendations]);
 
   const lastRecDate = useMemo(() => {
@@ -38,6 +37,13 @@ export default function CategorySearchAndPrompt({
     return latest.createdAt?.toDate();
   }, [matchingRecs]);
 
+  const canSubmit = requestText.trim() && effectiveCategory.trim();
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    onPrefillRequest(effectiveCategory.trim(), requestText.trim());
+  };
+
   return (
     <div className="bg-blue-50 border border-blue-300 rounded p-4 mb-4">
       <div className="flex justify-between items-center mb-4">
@@ -45,7 +51,7 @@ export default function CategorySearchAndPrompt({
           <h2 className="text-sm text-gray-700 font-semibold mb-1">
             Neighboroonie grows here when you plant your request.
           </h2>
-         <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-700">
             <strong>Search</strong> existing recommendations and <strong>ask</strong> for new ones.
           </p>
         </div>
@@ -56,6 +62,7 @@ export default function CategorySearchAndPrompt({
         />
       </div>
 
+      {/* Request text */}
       <div className="mb-3">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           What are you looking for help with?
@@ -69,6 +76,7 @@ export default function CategorySearchAndPrompt({
         />
       </div>
 
+      {/* Category input + suggestions */}
       <div className="mb-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Select a category
@@ -106,7 +114,7 @@ export default function CategorySearchAndPrompt({
             (type) => type.toLowerCase() === selectedCategory.toLowerCase()
           ) && (
             <li
-              className="px-4 py-2 text-gray-500 italic"
+              className="px-4 py-2 text-gray-500 italic cursor-pointer"
               onClick={() => setSelectedCategory(selectedCategory)}
             >
               Use “{selectedCategory}” as a new category
@@ -124,6 +132,7 @@ export default function CategorySearchAndPrompt({
         />
       )}
 
+      {/* Matches + last rec info */}
       {effectiveCategory && (
         <div>
           {matchingRecs.length > 0 ? (
@@ -133,26 +142,27 @@ export default function CategorySearchAndPrompt({
                 {matchingRecs.length > 1 && "s"} in this category.
               </p>
               <ul className="list-disc pl-4 space-y-1 text-sm text-gray-700">
-  {matchingRecs.slice(0, 3).map((rec) => (
-    <li key={rec.id}>
-      <Link
-        to={`/recommendations/${rec.id}`}
-        className="font-semibold text-blue-600 underline"
-      >
-        {rec.name}
-      </Link>: {rec.testimonial}
-      <span className="text-[10px] text-gray-500 ml-1">
-        –{" "}
-        <Link
-          to={`/users/${rec.submittedByUid}`}
-          className="text-blue-600 underline"
-        >
-          {rec.submittedBy?.name || "unknown"}
-        </Link>
-      </span>
-    </li>
-  ))}
-</ul>
+                {matchingRecs.slice(0, 3).map((rec) => (
+                  <li key={rec.id}>
+                    <Link
+                      to={`/recommendations/${rec.id}`}
+                      className="font-semibold text-blue-600 underline"
+                    >
+                      {rec.name}
+                    </Link>
+                    : {rec.testimonial}
+                    <span className="text-[10px] text-gray-500 ml-1">
+                      –{" "}
+                      <Link
+                        to={`/users/${rec.submittedByUid}`}
+                        className="text-blue-600 underline"
+                      >
+                        {rec.submittedBy?.name || "unknown"}
+                      </Link>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </>
           ) : (
             <p className="text-sm text-gray-500 italic mb-2">
@@ -165,28 +175,22 @@ export default function CategorySearchAndPrompt({
               Most recent recommendation was from {lastRecDate.toLocaleDateString()}.
             </p>
           )}
+        </div>
+      )}
 
-          {!showInlineForm ? (
-            <button
-              className="mt-2 btn-secondary text-sm py-1 px-3"
-              onClick={() => setShowInlineForm(true)}
-            >
-              Request New Recommendations
-            </button>
-          ) : (
-            <div className="mt-3">
-              <button
-                className="mt-2 btn-secondary text-sm py-1 px-3"
-                onClick={() => {
-                  if (requestText.trim()) {
-                    onPrefillRequest(effectiveCategory, requestText);
-                  }
-                }}
-              >
-                Submit Request
-              </button>
-            </div>
-          )}
+      {/* Single-step submit section */}
+      {canSubmit && (
+        <div className="mt-3">
+          <p className="text-xs text-gray-500 mb-2">
+      🍏 This request will be shared with {groupMemberCount} neighbors and will help
+      build our neighborhood knowledge base.
+    </p>
+          <button
+            className="btn-secondary text-sm py-1 px-3"
+            onClick={handleSubmit}
+          >
+            Request New Recommendations
+          </button>
         </div>
       )}
     </div>

@@ -474,6 +474,7 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
 <CategorySearchAndPrompt
   serviceTypes={serviceTypes}
   recommendations={recommendations}
+  groupMemberCount={groupUserCount ?? 0}   // ← add this
   onPrefillRequest={async (category, text) => {
     // Check if serviceType exists in Firestore
     const categoryRef = doc(db, "serviceTypes", category);
