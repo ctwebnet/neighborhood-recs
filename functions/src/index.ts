@@ -256,7 +256,9 @@ export const sendNewRequestEmail = functions.firestore
         await resend.emails.send({
           from: "Neighboroonie <noreply@neighboroonie.com>",
           to: email,
-          subject: `New request in your Neighboroonie group: ${groupId}`,
+          subject: `${
+  submittedBy?.firstName || submittedBy?.name || "Someone"
+} just asked for a ${serviceType || "local"} recommendation in ${groupId}`,
           html: `
             <p><strong>${submittedBy.name}</strong> asked for a recommendation in <strong>${groupId}</strong>.</p>
             <p><em>Category:</em> ${serviceType}</p>
@@ -389,10 +391,10 @@ You can manage your email preferences here: https://neighboroonie.com/settings
 
     return null;
   });
-  
-// 📅 Weekly digest email with recent recommendations
+
+// 📅 Weekly digest email with recent recommendations (+ unanswered requests)
 exports.sendWeeklyDigest = functions
-  .runWith({ timeoutSeconds: 300, memory: "512MB" }) // keep the larger budget
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.schedule("every monday 9:00")
   .timeZone("America/New_York")
   .onRun(async () => {
@@ -400,9 +402,10 @@ exports.sendWeeklyDigest = functions
       new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     );
 
-    // 🔢 overall counters
+    // overall counters
     let overall = { eligible: 0, skipped: 0, sent: 0, errors: 0, groups: 0 };
 
+    // recent recs (this week) grouped by groupId
     const recSnap = await admin
       .firestore()
       .collection("recommendations")
@@ -416,15 +419,38 @@ exports.sendWeeklyDigest = functions
       recsByGroup[rec.groupId].push(rec);
     });
 
+    // recent requests (this week) grouped by groupId
+    const reqSnap = await admin
+      .firestore()
+      .collection("requests")
+      .where("createdAt", ">=", oneWeekAgo)
+      .get();
+
+    const requestsByGroup: Record<string, any[]> = {};
+    reqSnap.forEach((doc) => {
+      const rq = { id: doc.id, ...doc.data() } as any;
+      if (!requestsByGroup[rq.groupId]) requestsByGroup[rq.groupId] = [];
+      requestsByGroup[rq.groupId].push(rq);
+    });
+
+    // helper
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    const chunk = <T,>(arr: T[], size = 10) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+
     for (const groupId of Object.keys(recsByGroup)) {
-      const recs = recsByGroup[groupId];
+      const recs = recsByGroup[groupId] || [];
       if (recs.length === 0) continue;
 
       overall.groups += 1;
 
-      // 🔢 per‑group counters
+      // per‑group counters
       let groupCounts = { eligible: 0, skipped: 0, sent: 0, errors: 0 };
 
+      // Pull group members
       const usersSnap = await admin
         .firestore()
         .collection("users")
@@ -432,18 +458,20 @@ exports.sendWeeklyDigest = functions
         .get();
 
       const eligibleUsers = usersSnap.docs.filter((doc) => {
-        const u = doc.data();
+        const u = doc.data() as any;
         return u.email && !u.weeklyDigestOptOut;
       });
 
       if (eligibleUsers.length === 0) continue;
 
+      // SUBJECT
       const firstRec = recs[0];
-      const recommenderName = firstRec.submittedBy?.name || "Someone";
+      const recommenderName = firstRec?.submittedBy?.name || "Someone";
       const subject = `${recommenderName} and others shared new recs in ${groupId}`;
 
-      const listItems = recs.map(
-        (r) => `
+      // “New this week” list
+      const newRecItems = recs.map(
+        (r: any) => `
 <li>
   <strong>${r.name || "Unnamed"}</strong> — ${r.testimonial?.slice(0, 100) || "No testimonial"}...
   <br />
@@ -453,27 +481,79 @@ exports.sendWeeklyDigest = functions
 </li>`
       );
 
+      // UNANSWERED (this week’s requests that have zero recs overall)
+      const groupRequests = requestsByGroup[groupId] || [];
+      let unanswered: any[] = [];
+
+      if (groupRequests.length > 0) {
+        const requestIds = groupRequests.map((rq: any) => rq.id);
+        const idChunks = chunk(requestIds, 10);
+
+        const recQueries = idChunks.map((ids) =>
+          admin
+            .firestore()
+            .collection("recommendations")
+            .where("linkedRequestId", "in", ids)
+            .limit(1)
+            .get()
+        );
+        const recResults = await Promise.all(recQueries);
+
+        const answeredIds = new Set<string>();
+        recResults.forEach((snap) => {
+          snap.forEach((d) => {
+            const x = d.data() as any;
+            if (x?.linkedRequestId) answeredIds.add(x.linkedRequestId);
+          });
+        });
+
+        unanswered = groupRequests.filter((rq: any) => !answeredIds.has(rq.id));
+      }
+
+      const unansweredItems = unanswered.slice(0, 5).map(
+        (rq: any) => `
+<li>
+  <em>${(rq.text || "").toString().slice(0, 140)}${(rq.text || "").length > 140 ? "…" : ""}</em>
+  <br />
+  <a href="https://neighboroonie.com/request/${rq.id}">Reply with a recommendation →</a>
+</li>`
+      );
+
+      // EMAIL HTML
       const html = `
 <p>Here are new recommendations shared in your Neighboroonie group <strong>${groupId}</strong> this week:</p>
-<ul>${listItems.join("")}</ul>
+
+<ul>${newRecItems.join("")}</ul>
+
+${
+  unansweredItems.length
+    ? `
+<hr />
+<h3>Requests still looking for a great name</h3>
+<ul>${unansweredItems.join("")}</ul>
 <p><a href="https://neighboroonie.com/${groupId}">See all group activity →</a></p>
-<p>Want to help others in your community?</p>
+`
+    : `
+<p><a href="https://neighboroonie.com/${groupId}">See all group activity →</a></p>
+`
+}
+
+<p>Want to help your neighbors?</p>
 <p><a href="https://neighboroonie.com/my-list">Add your own recommendations →</a></p>
+
 <hr />
 <p style="font-size: 12px; color: #888;">
   You can manage your email preferences <a href="https://neighboroonie.com/settings" style="color: #555;">here</a>.
 </p>`;
 
-      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
+      // send loop (idempotent per user+group+week)
       for (const userDoc of eligibleUsers) {
-        const email = userDoc.data().email as string;
+        const email = (userDoc.data() as any).email as string;
         const userId = userDoc.id;
         groupCounts.eligible += 1;
         overall.eligible += 1;
 
-        // ✅ idempotency key (same as you added)
-        const weekKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (Mon)
+        const weekKey = new Date().toISOString().slice(0, 10);
         const logId = `${userId}_${groupId}_${weekKey}`;
         const logRef = admin.firestore().collection("weeklyDigestLog").doc(logId);
         const already = await logRef.get();
@@ -483,7 +563,7 @@ exports.sendWeeklyDigest = functions
           continue;
         }
 
-        await delay(600); // Resend throttle
+        await delay(600); // keep conservative throttle unless you want to lower
 
         try {
           await resend.emails.send({
@@ -492,6 +572,7 @@ exports.sendWeeklyDigest = functions
             subject,
             html,
           });
+
           await logRef.set({
             userId,
             groupId,
@@ -510,16 +591,141 @@ exports.sendWeeklyDigest = functions
         }
       }
 
-      // 🧾 per‑group summary
       console.log(
         `Digest summary for ${groupId}: eligible=${groupCounts.eligible}, skipped=${groupCounts.skipped}, sent=${groupCounts.sent}, errors=${groupCounts.errors}`
       );
     }
 
-    // 🧮 overall summary
     console.log(
       `WeeklyDigest overall: groups=${overall.groups}, eligible=${overall.eligible}, skipped=${overall.skipped}, sent=${overall.sent}, errors=${overall.errors}`
     );
 
     return null;
   });
+// 🧪 Preview a single group's digest to a single recipient (no logging)
+exports.sendWeeklyDigestPreview = functions.https.onRequest(async (req, res) => {
+  try {
+    const groupId = (req.query.groupId as string) || "";
+    const to = (req.query.to as string) || "";
+
+    if (!groupId || !to) {
+      res.status(400).send("Missing required query params: ?groupId=...&to=...");
+      return;
+    }
+
+    const oneWeekAgo = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    );
+
+    // recs
+    const recSnap = await admin
+      .firestore()
+      .collection("recommendations")
+      .where("groupId", "==", groupId)
+      .where("createdAt", ">=", oneWeekAgo)
+      .get();
+    const recs = recSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+
+    // requests (this week)
+    const reqSnap = await admin
+      .firestore()
+      .collection("requests")
+      .where("groupId", "==", groupId)
+      .where("createdAt", ">=", oneWeekAgo)
+      .get();
+    const requests = reqSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+
+    // subject
+    const recommenderName = recs[0]?.submittedBy?.name || "Someone";
+    const subject = `${recommenderName} and others shared new recs in ${groupId}`;
+
+    // render new recs
+    const newRecItems = recs.map(
+      (r: any) => `
+<li>
+  <strong>${r.name || "Unnamed"}</strong> — ${r.testimonial?.slice(0, 100) || "No testimonial"}...
+  <br />
+  <a href="https://neighboroonie.com/recommendations/${r.id}">
+    View full recommendation →
+  </a>
+</li>`
+    );
+
+    // unanswered (use “any time” check like main job)
+    const chunk = <T,>(arr: T[], size = 10) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+
+    let unanswered: any[] = [];
+    if (requests.length > 0) {
+      const requestIds = requests.map((rq: any) => rq.id);
+      const idChunks = chunk(requestIds, 10);
+      const recQueries = idChunks.map((ids) =>
+        admin
+          .firestore()
+          .collection("recommendations")
+          .where("linkedRequestId", "in", ids)
+          .limit(1)
+          .get()
+      );
+      const recResults = await Promise.all(recQueries);
+      const answeredIds = new Set<string>();
+      recResults.forEach((snap) =>
+        snap.forEach((doc) => {
+          const dd = doc.data() as any;
+          if (dd?.linkedRequestId) answeredIds.add(dd.linkedRequestId);
+        })
+      );
+      unanswered = requests.filter((rq: any) => !answeredIds.has(rq.id));
+    }
+
+    const unansweredItems = unanswered.slice(0, 5).map(
+      (rq: any) => `
+<li>
+  <em>${(rq.text || "").toString().slice(0, 140)}${(rq.text || "").length > 140 ? "…" : ""}</em>
+  <br />
+  <a href="https://neighboroonie.com/request/${rq.id}">Reply with a recommendation →</a>
+</li>`
+    );
+
+    const html = `
+<p>Here are new recommendations shared in your Neighboroonie group <strong>${groupId}</strong> this week:</p>
+
+<ul>${newRecItems.join("")}</ul>
+
+${
+  unansweredItems.length
+    ? `
+<hr />
+<h3>Requests still looking for a great name</h3>
+<ul>${unansweredItems.join("")}</ul>
+<p><a href="https://neighboroonie.com/${groupId}">See all group activity →</a></p>
+`
+    : `
+<p><a href="https://neighboroonie.com/${groupId}">See all group activity →</a></p>
+`
+}
+
+<p>Want to help your neighbors?</p>
+<p><a href="https://neighboroonie.com/my-list">Add your own recommendations →</a></p>
+
+<hr />
+<p style="font-size: 12px; color: #888;">
+  You can manage your email preferences <a href="https://neighboroonie.com/settings" style="color: #555;">here</a>.
+</p>`;
+
+    await resend.emails.send({
+      from: "Neighboroonie <noreply@neighboroonie.com>",
+      to,
+      subject,
+      html,
+    });
+
+    res.status(200).send(`Preview digest sent to ${to} for group ${groupId}`);
+  } catch (err: any) {
+    console.error("Preview error", err);
+    res.status(500).send(err?.message || "Unknown error");
+  }
+});
