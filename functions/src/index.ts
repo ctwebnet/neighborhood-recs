@@ -636,3 +636,297 @@ ${topNudge}
     return;
   }
 });
+
+// Preview: send all *unanswered* requests for a group to a single address (you)
+exports.sendUnansweredPreview = functions.https.onRequest(async (req, res) => {
+  try {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+    // ---- body parsing (handles rawBody / string) ----
+    const getBody = () => {
+      if (req.body && Object.keys(req.body).length) return req.body;
+      try {
+        if ((req as any).rawBody) return JSON.parse((req as any).rawBody.toString("utf8"));
+      } catch {}
+      try {
+        if (typeof req.body === "string") return JSON.parse(req.body);
+      } catch {}
+      return {};
+    };
+    const { groupId, emailOverride } = getBody() as {
+      groupId?: string;
+      emailOverride?: string;
+    };
+
+    if (!groupId) {
+      res.status(400).json({ error: "Missing groupId" });
+      return;
+    }
+
+    // Send to you by default (preview)
+    const toEmail = emailOverride || "ctwebnet@gmail.com";
+
+    // ---- CONFIG: how far back to look for unanswered requests ----
+    const windowDays = 60; // change to 365 (or remove filter) if you want all-time
+    const since = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+    );
+
+    // 1) Pull recent requests in this group
+    let q = admin.firestore().collection("requests").where("groupId", "==", groupId);
+    if (windowDays > 0) q = q.where("createdAt", ">=", since);
+    const reqSnap = await q.get();
+
+    if (reqSnap.empty) {
+      await resend.emails.send({
+        from: "Neighboroonie <noreply@neighboroonie.com>",
+        to: toEmail,
+        subject: `Open requests in ${groupId}`,
+        html: `
+<p>No requests found in the last ${windowDays} days for <strong>${groupId}</strong>.</p>
+<p><a href="https://neighboroonie.com/${encodeURIComponent(groupId)}">Go to your group →</a></p>
+        `.trim(),
+      });
+      res.json({ ok: true, message: "No requests found" });
+      return;
+    }
+
+    // 2) For each request, check if it has any recommendations (linkedRequestId)
+    const requests = reqSnap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+
+    // We’ll do batched checks to avoid composite indexes
+    const unanswered: any[] = [];
+    for (const r of requests) {
+      const replies = await admin
+        .firestore()
+        .collection("recommendations")
+        .where("linkedRequestId", "==", r.id)
+        .limit(1)
+        .get();
+      if (replies.empty) unanswered.push(r);
+    }
+
+    // 3) Build the email
+    const subject = `Open requests in ${groupId} (${unanswered.length})`;
+    const items = unanswered.map((rq) => {
+      const text = (rq.text || "").toString();
+      const short = text.length > 160 ? `${text.slice(0, 160)}…` : text;
+      return `
+<li style="margin-bottom:8px;">
+  <em>${short || "Someone asked for a recommendation"}</em>
+  <br/>
+  <a href="https://neighboroonie.com/request/${rq.id}">Add a recommendation →</a>
+</li>`;
+    });
+
+    const html = `
+<p>Here are <strong>${unanswered.length}</strong> open requests from your Neighboroonie group <strong>${groupId}</strong>${
+      windowDays ? ` in the last ${windowDays} days` : ""
+    }:</p>
+
+${
+  unanswered.length
+    ? `<ul>${items.join("")}</ul>`
+    : `<p><em>Nice! There are no unanswered requests right now.</em></p>`
+}
+
+<hr />
+<p style="font-size: 12px; color: #888;">
+  Preview sent to ${toEmail}. <a href="https://neighboroonie.com/${encodeURIComponent(
+      groupId
+    )}">See all group activity →</a>
+</p>
+`.trim();
+
+    await resend.emails.send({
+      from: "Neighboroonie <noreply@neighboroonie.com>",
+      to: toEmail,
+      subject,
+      html,
+    });
+
+    console.log(`(Preview) Sent UNANSWERED digest to ${toEmail} for group ${groupId} — ${unanswered.length} items`);
+    res.json({ ok: true, count: unanswered.length });
+  } catch (err) {
+    console.error("sendUnansweredPreview error:", err);
+    res.status(500).send("Internal error");
+  }
+});
+// 📬 Weekly unanswered-requests digest (7 days, no composite indexes)
+exports.sendUnansweredWeeklyDigest = functions
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .pubsub.schedule("every tuesday 9:10") // tweak day/time as you like
+  .timeZone("America/New_York")
+  .onRun(async () => {
+    const db = admin.firestore();
+    const oneWeekAgo = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    );
+
+    // Pull requests from last 7 days (single-field index only)
+    const reqSnap = await db
+      .collection("requests")
+      .where("createdAt", ">=", oneWeekAgo)
+      .get();
+
+    if (reqSnap.empty) {
+      console.log("No requests this week; nothing to send.");
+      return null;
+    }
+
+    // Group by groupId
+    const byGroup: Record<string, any[]> = {};
+    reqSnap.forEach((d) => {
+      const rq = { id: d.id, ...d.data() } as any;
+      if (!rq.groupId) return;
+      (byGroup[rq.groupId] ||= []).push(rq);
+    });
+
+    const chunk = <T,>(arr: T[], size = 10) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+    let overall = { groups: 0, eligible: 0, skipped: 0, sent: 0, errors: 0 };
+
+    for (const groupId of Object.keys(byGroup)) {
+      const groupReqs = byGroup[groupId] || [];
+
+      // Determine unanswered via 'in' on linkedRequestId (no composite needed)
+      const ids = groupReqs.map((r) => r.id);
+      const idChunks = chunk(ids, 10);
+
+      const answered = new Set<string>();
+      const recQueries = idChunks.map((c) =>
+        db
+          .collection("recommendations")
+          .where("linkedRequestId", "in", c)
+          .select("linkedRequestId")
+          .get()
+      );
+      const recResults = await Promise.all(recQueries);
+      recResults.forEach((snap) =>
+        snap.forEach((doc) => {
+          const x = doc.data() as any;
+          if (x?.linkedRequestId) answered.add(x.linkedRequestId);
+        })
+      );
+
+      const unanswered = groupReqs
+        .filter((rq) => !answered.has(rq.id))
+        .sort(
+          (a, b) =>
+            (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)
+        )
+        .slice(0, 12);
+
+      if (unanswered.length === 0) {
+        console.log(`Group ${groupId}: no unanswered this week; skipping.`);
+        continue;
+      }
+
+      overall.groups += 1;
+
+      // Recipients (reuse weeklyDigestOptOut)
+      const usersSnap = await db
+        .collection("users")
+        .where("groupIds", "array-contains", groupId)
+        .get();
+
+      const recipients = usersSnap.docs.filter((u) => {
+        const d = u.data() as any;
+        return d.email && !d.weeklyDigestOptOut;
+      });
+      if (recipients.length === 0) continue;
+
+      const subject = `Unanswered Requests For Recommendations This Week ${groupId}`;
+      const listItems = unanswered.map(
+        (rq) => `
+<li>
+  <em>${(rq.text || "").toString().slice(0, 160)}${
+          (rq.text || "").length > 160 ? "…" : ""
+        }</em>
+  <br />
+  <a href="https://neighboroonie.com/request/${rq.id}">
+    Add a recommendation →
+  </a>
+</li>`
+      );
+
+      const html = `
+<p>A few neighbors in <strong>${groupId}</strong> are waiting on a local recommendation:</p>
+<ul>${listItems.join("")}</ul>
+<p><a href="https://neighboroonie.com/${encodeURIComponent(
+        groupId
+      )}">See all group activity →</a></p>
+<p>Have a need of your own?</p>
+<p><a href="https://neighboroonie.com/my-list">Ask your neighbors (it can help you and help build the local knowledge base) →</a></p>
+<hr />
+<p style="font-size:12px;color:#888;">
+  You can manage your email preferences <a href="https://neighboroonie.com/settings" style="color:#555;">here</a>.
+</p>`.trim();
+
+      // Idempotency: separate log from the recs digest
+      const weekKey = new Date().toISOString().slice(0, 10);
+      let groupCounts = { eligible: 0, sent: 0, skipped: 0, errors: 0 };
+
+      for (const userDoc of recipients) {
+        const email = (userDoc.data() as any).email as string;
+        const userId = userDoc.id;
+        groupCounts.eligible += 1;
+        overall.eligible += 1;
+
+        const logId = `${userId}_${groupId}_${weekKey}_unanswered`;
+        const logRef = db.collection("unansweredDigestLog").doc(logId);
+        const already = await logRef.get();
+        if (already.exists) {
+          groupCounts.skipped += 1;
+          overall.skipped += 1;
+          continue;
+        }
+
+        await delay(500); // stay friendly to Resend
+
+        try {
+          await resend.emails.send({
+            from: "Neighboroonie <noreply@neighboroonie.com>",
+            to: email,
+            subject,
+            html,
+          });
+
+          await logRef.set({
+            userId,
+            groupId,
+            weekKey,
+            type: "unanswered",
+            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            email,
+          });
+
+          groupCounts.sent += 1;
+          overall.sent += 1;
+          console.log(`📬 Unanswered digest -> ${email} (${groupId})`);
+        } catch (err) {
+          groupCounts.errors += 1;
+          overall.errors += 1;
+          console.error(`Error emailing ${email} (${groupId}):`, err);
+        }
+      }
+
+      console.log(
+        `Unanswered summary ${groupId}: eligible=${groupCounts.eligible}, sent=${groupCounts.sent}, skipped=${groupCounts.skipped}, errors=${groupCounts.errors}`
+      );
+    }
+
+    console.log(
+      `Unanswered overall: groups=${overall.groups}, eligible=${overall.eligible}, sent=${overall.sent}, skipped=${overall.skipped}, errors=${overall.errors}`
+    );
+
+    return null;
+  });
