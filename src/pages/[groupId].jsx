@@ -568,27 +568,47 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
     feedItems.map((item) => {
       switch (item.type) {
         case "request":
-          return (
-            <div key={`request-${item.id}`} className="bg-white border p-4 mb-4 rounded">
-              <p className="text-sm text-gray-600">
-                🛠️{" "}
-                <Link
-                  to={`/users/${item.submittedByUid}`}
-                  className="text-blue-600 underline"
-                >
-                  {item.submittedBy?.name || "A neighbor"}
-                </Link>{" "}
-                asked:
-              </p>
-              <p className="font-semibold mb-2">{item.text}</p>
-              <Link
-                to={`/request/${item.id}`}
-                className="text-blue-600 underline text-sm"
-              >
-                View Request →
-              </Link>
-            </div>
-          );
+  return (
+    <div key={`request-${item.id}`} className="bg-white border p-4 mb-4 rounded">
+      <p className="text-sm text-gray-600">
+        🛠️{" "}
+        <Link
+          to={`/users/${item.submittedByUid}`}
+          className="text-blue-600 underline"
+        >
+          {item.submittedBy?.name || "A neighbor"}
+        </Link>{" "}
+        asked:
+      </p>
+
+      <p className="font-semibold mb-2">{item.text}</p>
+
+      <div className="mt-2 flex items-center gap-3 text-sm">
+        <span
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+            (item.repliesCount || 0) > 0
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-700"
+          }`}
+          title="Number of replies"
+        >
+          💬 {(item.repliesCount ?? 0)}{" "}
+          {(item.repliesCount ?? 0) === 1 ? "reply" : "replies"}
+        </span>
+
+        {(item.repliesCount ?? 0) === 0 && (
+          <span className="text-gray-500">Be the first to help</span>
+        )}
+
+        <Link
+          to={`/request/${item.id}`}
+          className="text-blue-600 underline"
+        >
+          View Request →
+        </Link>
+      </div>
+    </div>
+  );
 
         case "recommendation":
           return (
