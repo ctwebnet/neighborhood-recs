@@ -12,6 +12,9 @@ export default function CategorySearchAndPrompt({
   const [customCategory, setCustomCategory] = useState("");
   const [requestText, setRequestText] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Hide category picker until there's a bit of request text
+  const MIN_FOR_CATEGORY = 8; // tweak if you want
+  const showCategoryUI = requestText.trim().length >= MIN_FOR_CATEGORY;
 
   useEffect(() => {
     if (requestText.trim() && serviceTypes.length > 0) {
@@ -76,108 +79,111 @@ export default function CategorySearchAndPrompt({
         />
       </div>
 
-      {/* Category input + suggestions */}
-      <div className="mb-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Select a category
-        </label>
-        <input
-          className="w-full border p-2"
-          placeholder="Start typing: electrician, plumber, tutor..."
-          value={selectedCategory}
-          onChange={(e) => {
-            setSelectedCategory(e.target.value);
-            setCustomCategory("");
-          }}
-          onFocus={() => setShowSuggestions(true)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        />
-      </div>
+      {/* Category input + suggestions (revealed after they type enough) */}
+{showCategoryUI && (
+  <>
+    <div className="mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Select a category
+      </label>
+      <input
+        className="w-full border p-2"
+        placeholder="Start typing: electrician, plumber, tutor..."
+        value={selectedCategory}
+        onChange={(e) => {
+          setSelectedCategory(e.target.value);
+          setCustomCategory("");
+        }}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+      />
+    </div>
 
-      {selectedCategory && showSuggestions && (
-        <ul className="border border-gray-300 rounded bg-white max-h-32 overflow-y-auto mt-1 text-sm">
-          {serviceTypes
-            .filter((type) =>
-              type.toLowerCase().includes(selectedCategory.toLowerCase())
-            )
-            .slice(0, 8)
-            .map((match) => (
-              <li
-                key={match}
-                className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm"
-                onClick={() => setSelectedCategory(match)}
-              >
-                {match}
-              </li>
-            ))}
-          {!serviceTypes.some(
-            (type) => type.toLowerCase() === selectedCategory.toLowerCase()
-          ) && (
+    {selectedCategory && showSuggestions && (
+      <ul className="border border-gray-300 rounded bg-white max-h-32 overflow-y-auto mt-1 text-sm">
+        {serviceTypes
+          .filter((type) =>
+            type.toLowerCase().includes(selectedCategory.toLowerCase())
+          )
+          .slice(0, 8)
+          .map((match) => (
             <li
-              className="px-4 py-2 text-gray-500 italic cursor-pointer"
-              onClick={() => setSelectedCategory(selectedCategory)}
+              key={match}
+              className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm"
+              onClick={() => setSelectedCategory(match)}
             >
-              Use “{selectedCategory}” as a new category
+              {match}
             </li>
-          )}
-        </ul>
-      )}
+          ))}
+        {!serviceTypes.some(
+          (type) => type.toLowerCase() === selectedCategory.toLowerCase()
+        ) && (
+          <li
+            className="px-4 py-2 text-gray-500 italic cursor-pointer"
+            onClick={() => setSelectedCategory(selectedCategory)}
+          >
+            Use “{selectedCategory}” as a new category
+          </li>
+        )}
+      </ul>
+    )}
 
-      {selectedCategory === "__custom" && (
-        <input
-          className="w-full border p-2 mb-2"
-          placeholder="New category name"
-          value={customCategory}
-          onChange={(e) => setCustomCategory(e.target.value)}
-        />
-      )}
+    {selectedCategory === "__custom" && (
+      <input
+        className="w-full border p-2 mb-2"
+        placeholder="New category name"
+        value={customCategory}
+        onChange={(e) => setCustomCategory(e.target.value)}
+      />
+    )}
 
-      {/* Matches + last rec info */}
-      {effectiveCategory && (
-        <div>
-          {matchingRecs.length > 0 ? (
-            <>
-              <p className="text-sm text-gray-600 mb-2">
-                We found {matchingRecs.length} recommendation
-                {matchingRecs.length > 1 && "s"} in this category.
-              </p>
-              <ul className="list-disc pl-4 space-y-1 text-sm text-gray-700">
-                {matchingRecs.slice(0, 3).map((rec) => (
-                  <li key={rec.id}>
+    {/* Matches + last rec info */}
+    {effectiveCategory && (
+      <div>
+        {matchingRecs.length > 0 ? (
+          <>
+            <p className="text-sm text-gray-600 mb-2">
+              We found {matchingRecs.length} recommendation
+              {matchingRecs.length > 1 && "s"} in this category.
+            </p>
+            <ul className="list-disc pl-4 space-y-1 text-sm text-gray-700">
+              {matchingRecs.slice(0, 3).map((rec) => (
+                <li key={rec.id}>
+                  <Link
+                    to={`/recommendations/${rec.id}`}
+                    className="font-semibold text-blue-600 underline"
+                  >
+                    {rec.name}
+                  </Link>
+                  : {rec.testimonial}
+                  <span className="text-[10px] text-gray-500 ml-1">
+                    –{" "}
                     <Link
-                      to={`/recommendations/${rec.id}`}
-                      className="font-semibold text-blue-600 underline"
+                      to={`/users/${rec.submittedByUid}`}
+                      className="text-blue-600 underline"
                     >
-                      {rec.name}
+                      {rec.submittedBy?.name || "unknown"}
                     </Link>
-                    : {rec.testimonial}
-                    <span className="text-[10px] text-gray-500 ml-1">
-                      –{" "}
-                      <Link
-                        to={`/users/${rec.submittedByUid}`}
-                        className="text-blue-600 underline"
-                      >
-                        {rec.submittedBy?.name || "unknown"}
-                      </Link>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500 italic mb-2">
-              No recommendations found yet.
-            </p>
-          )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500 italic mb-2">
+            No recommendations found yet.
+          </p>
+        )}
 
-          {lastRecDate && (
-            <p className="text-sm text-gray-500 mt-2">
-              Most recent recommendation was from {lastRecDate.toLocaleDateString()}.
-            </p>
-          )}
-        </div>
-      )}
-
+        {lastRecDate && (
+          <p className="text-sm text-gray-500 mt-2">
+            Most recent recommendation was from {lastRecDate.toLocaleDateString()}.
+          </p>
+        )}
+      </div>
+    )}
+  </>
+)}
       {/* Single-step submit section */}
       {canSubmit && (
         <div className="mt-3">
