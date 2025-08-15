@@ -49,6 +49,9 @@ export default function GroupPage() {
   const [showRecForm, setShowRecForm] = useState(false); 
   const [feedItems, setFeedItems] = useState([]);
   const [referralCount, setReferralCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all"); // 'all' | 'request' | 'recommendation'
+  const [unansweredOnly, setUnansweredOnly] = useState(false);
 
   useEffect(() => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -378,6 +381,33 @@ const completedSteps = [
   hasPostedRec ? 1 : 0,
 ].reduce((a, b) => a + b, 0);
 const progressPercent = Math.round((completedSteps / totalSteps) * 100);
+const term = searchTerm.trim().toLowerCase();
+const filteredFeed = feedItems.filter((item) => {
+  if (typeFilter !== "all" && item.type !== typeFilter) return false;
+
+  if (unansweredOnly && item.type === "request") {
+    const rc = typeof item.repliesCount === "number" ? item.repliesCount : 0;
+    if (rc > 0) return false;
+  }
+
+  if (term) {
+    const haystack = [
+      item.type,
+      item.text,
+      item.name,
+      item.serviceType,
+      item.submittedBy?.name,
+      item.submittedBy?.email,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (!haystack.includes(term)) return false;
+  }
+
+  return true;
+});
   return (
     <>
   <Header />
@@ -561,95 +591,107 @@ const progressPercent = Math.round((completedSteps / totalSteps) * 100);
           </div>*/}
           {/* Requests & Replies */}
 <div className="mb-8">
-  <h2 className="text-xl font-semibold mb-4">Group Activity</h2>
-  {feedItems.length === 0 ? (
-    <p className="text-gray-500 italic">No recent activity yet.</p>
-  ) : (
-    feedItems.map((item) => {
-      switch (item.type) {
-        case "request":
-  return (
-    <div key={`request-${item.id}`} className="bg-white border p-4 mb-4 rounded">
-      <p className="text-sm text-gray-600">
-        🛠️{" "}
-        <Link
-          to={`/users/${item.submittedByUid}`}
-          className="text-blue-600 underline"
-        >
-          {item.submittedBy?.name || "A neighbor"}
-        </Link>{" "}
-        asked:
-      </p>
+<h2 className="text-xl font-semibold mb-4">Group Activity</h2>
+{/* Feed Filters */}
+<div className="bg-white border rounded p-3 mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+  <div className="flex-1">
+    <input
+      type="text"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      placeholder="Search requests, recs, names, categories…"
+      className="w-full border rounded px-3 py-2 text-sm"
+    />
+  </div>
 
-      <p className="font-semibold mb-2">{item.text}</p>
+  <div className="flex items-center gap-3">
+    <label className="text-sm text-gray-700">
+      Type:&nbsp;
+      <select
+        value={typeFilter}
+        onChange={(e) => setTypeFilter(e.target.value)}
+        className="border rounded px-2 py-1 text-sm"
+      >
+        <option value="all">All</option>
+        <option value="request">Requests</option>
+        <option value="recommendation">Recommendations</option>
+      </select>
+    </label>
 
-      <div className="mt-2 flex items-center gap-3 text-sm">
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
-            (item.repliesCount || 0) > 0
-              ? "bg-green-100 text-green-800"
-              : "bg-gray-100 text-gray-700"
-          }`}
-          title="Number of replies"
-        >
-          💬 {(item.repliesCount ?? 0)}{" "}
-          {(item.repliesCount ?? 0) === 1 ? "reply" : "replies"}
-        </span>
+    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+      <input
+        type="checkbox"
+        checked={unansweredOnly}
+        onChange={(e) => setUnansweredOnly(e.target.checked)}
+      />
+      Unanswered only
+    </label>
+  </div>
+</div>
+{filteredFeed.length === 0 ? (
+  <p className="text-gray-500 italic">No items match your filters.</p>
+) : (
+  filteredFeed.map((item) => {
+    switch (item.type) {
+      case "request":
+        return (
+          <div key={`request-${item.id}`} className="bg-white border p-4 mb-4 rounded">
+            <p className="text-sm text-gray-600">
+              🛠️{" "}
+              <Link to={`/users/${item.submittedByUid}`} className="text-blue-600 underline">
+                {item.submittedBy?.name || "A neighbor"}
+              </Link>{" "}
+              asked:
+            </p>
+            <p className="font-semibold mb-2">{item.text}</p>
 
-        {(item.repliesCount ?? 0) === 0 && (
-          <span className="text-gray-500">Be the first to help</span>
-        )}
-
-        <Link
-          to={`/request/${item.id}`}
-          className="text-blue-600 underline"
-        >
-          View Request →
-        </Link>
-      </div>
-    </div>
-  );
-
-        case "recommendation":
-          return (
-            <div key={`rec-${item.id}`} className="bg-gray-50 border p-4 mb-4 rounded">
-              <p className="text-sm text-gray-600">
-                ✅{" "}
-                <Link
-                  to={`/users/${item.submittedByUid}`}
-                  className="text-blue-600 underline"
-                >
-                  {item.submittedBy?.name || "A neighbor"}
-                </Link>{" "}
-                recommended:
-              </p>
-              <p className="font-semibold">{item.name}</p>
-              <p className="text-sm text-gray-500 mb-2">for {item.serviceType}</p>
-              <Link
-                to={`/recommendations/${item.id}`}
-                className="text-blue-600 underline text-sm"
-              >
-                View Recommendation →
+            {/* replies count badge (already added earlier) */}
+            <div className="flex items-center justify-between">
+              <Link to={`/request/${item.id}`} className="text-blue-600 underline text-sm">
+                View Request →
               </Link>
+              <span
+                className={`text-xs px-2 py-1 rounded border ${
+                  (item.repliesCount ?? 0) === 0
+                    ? "bg-yellow-50 text-yellow-800 border-yellow-300"
+                    : "bg-gray-50 text-gray-700 border-gray-300"
+                }`}
+                title="Number of neighbor replies"
+              >
+                {(item.repliesCount ?? 0) === 0 ? "No replies yet" : `${item.repliesCount} repl${(item.repliesCount ?? 0) === 1 ? "y" : "ies"}`}
+              </span>
             </div>
-          );
-
-        case "user_joined":
-          return (
-            <div
-              key={`user-${item.id}`}
-              className="bg-white border p-4 mb-4 rounded text-sm text-gray-500 italic"
-            >
-              <span className="text-2xl mr-2">🦩</span>
-              {item.firstName || item.email} just joined the group.
-            </div>
-          );
-
-        default:
-          return null;
-      }
-    })
-  )}
+          </div>
+        );
+      case "recommendation":
+        return (
+          <div key={`rec-${item.id}`} className="bg-gray-50 border p-4 mb-4 rounded">
+            <p className="text-sm text-gray-600">
+              ✅{" "}
+              <Link to={`/users/${item.submittedByUid}`} className="text-blue-600 underline">
+                {item.submittedBy?.name || "A neighbor"}
+              </Link>{" "}
+              recommended:
+            </p>
+            <p className="font-semibold">{item.name}</p>
+            <p className="text-sm text-gray-500 mb-2">for {item.serviceType}</p>
+            <Link to={`/recommendations/${item.id}`} className="text-blue-600 underline text-sm">
+              View Recommendation →
+            </Link>
+          </div>
+        );
+      case "user_joined":
+        return (
+          <div key={`user-${item.id}`} className="bg-white border p-4 mb-4 rounded text-sm text-gray-500 italic">
+            <span className="text-2xl mr-2">🦩</span>
+            {item.firstName || item.email} just joined the group.
+          </div>
+        );
+      default:
+        return null;
+    }
+  })
+)}
 </div>
         </div>
       </div>
